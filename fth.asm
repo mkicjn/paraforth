@@ -208,7 +208,7 @@ parse_name:
 ; For information on how this mechanism looks in code, see "Dispatch Method".
 ;
 ;	TODO: Shouldn't the following paragraph be somewhere else?
-; Bear in mind that this language's core does not have to be a Forth, per se.
+; Bear in mind that this project's core does not have to be a Forth, per se.
 ; In principle, the main idea of this project is to create an environment for
 ; binary code generation that is both convenient and potentially interactive.
 ; For its power and extreme simplicity, Forth is an excellent starting point.
@@ -275,7 +275,7 @@ dict_define:
 	; rsi = rsi+defn_size
 	;
 	; TODO: It would be convenient if this subroutine would
-	;       follow the Forth calling convention like dict_search
+	;       agree with the Forth calling convention like dict_search
 	push	rcx			;{
 	push	rdi			;{
 	; Shuffle values into appropriate regs
@@ -517,7 +517,7 @@ cstr_to_r:
 	; (1) The reason I keep doing `movzx eax, al` repeatedly is because
 	;     I use rax for some arithmetic on each iteration.
 	;     If I tried to do `xor eax, eax` at the start to avoid it,
-	;     the high bits wouldn't stay cleared the result would be wrong.
+	;     the high bits wouldn't stay cleared; the result would be wrong.
 	push	rsi			;{
 	mov	rsi, rax
 	; Load string length

@@ -1,6 +1,8 @@
 # flatforth
 ### A subroutine-threaded Forth focused on staying brutally simple and facilitating binary generation
 
+(Work in progress; name not yet permanent)
+
 All documentation and design notes are inside the assembly file as inline comments.
 
 ## State of the Project (6/6/2021)
@@ -12,3 +14,6 @@ There are no printing words, but the top stack item is returned in the form of t
 
 Hopefully soon there will be compiling words and a more complete vocabulary.
 For now, though, it really is just a proof of concept.
+
+To anyone reading this, be aware that I'm developing this project in my spare time outside of work.
+Progress will be very slow.
