@@ -273,9 +273,6 @@ dict_define:
 	; b[rsi..rsi+defn_size-9] = b[rax..rax+b[rax]+1],0...
 	; rax = rax+b[rax]+1
 	; rsi = rsi+defn_size
-	;
-	; TODO: It would be convenient if this subroutine would
-	;       agree with the Forth calling convention like dict_search
 	push	rcx			;{
 	push	rdi			;{
 	; Shuffle values into appropriate regs
@@ -434,6 +431,10 @@ macro DDUP {
 	push	rdx
 	push	rax
 }
+macro DDROP {
+	pop	rax
+	pop	rdx
+}
 ;
 ;
 ;	Word Dispatch
@@ -545,6 +546,56 @@ cstr_to_r:
 	ret
 
 
+;		Inliner
+;
+; This is the core compilation mechanism.
+; The call-before-data technique is used for simplicity.
+; The first four bytes after the call represent the length of the subroutine.
+;
+inliner:
+	; Inlines a subroutine at rdi
+	;
+	;	Preconditions
+	; Address on stack (to doubleword length followed by code)
+	; 
+	;	Postconditions
+	; Address on stack consumed
+	; rdi = rdi + dword [[rsp]]
+	; Memory between old and new values of rdi modified
+	pop	rbx
+	push	rsi			;{
+	mov	rsi, rbx
+	push	rax			;{
+	lodsd
+	push	rcx			;{
+	mov	ecx, eax
+	rep	movsb
+	pop	rcx			;}
+	pop	rax			;}
+	pop	rsi			;}
+	ret
+; 
+; This macro creates a subroutine for inlining the body of a 0-argument macro.
+; Basically, a pre-compiled macro for runtime compilation of code.
+;
+macro INLINE mac {
+	call	inliner
+	local .start
+	local .end
+	dd .end - .start
+.start:
+	mac
+.end:
+}
+
+inline_dup:
+	INLINE DUP
+DICT_DEFINE 'DUP', inline_dup
+
+; TODO: Add callers and replace existing words with callers or inliners
+; TODO: Add a mechanism for running the most recently compiled code
+
+
 
 ;		Forth Core
 ;
@@ -570,9 +621,14 @@ DICT_DEFINE 'WORD', fth_word
 fth_find: ; ( c-addr -- xt|0 )
 	jmp	dict_search
 DICT_DEFINE 'FIND', fth_find
-; ^ For consistency.
-; TODO: Make dict_define conform to Forth calling convention somehow,
-; then eliminate this subroutine definition.
+
+fth_define: ; ( xt c-addr -- )
+	ENTER
+	call	dict_define
+	DDROP
+	EXIT
+	ret
+DICT_DEFINE 'DEFINE', fth_define
 
 fth_execute: ; ( i*x xt -- j*x )
 	ENTER
@@ -600,6 +656,18 @@ fth_add: ; ( a b -- a+b )
 	ret
 DICT_DEFINE '+', fth_add
 
+fth_here: ; ( -- c-addr )
+	ENTER
+	DUP
+	mov	rax, rdi
+	EXIT
+	ret
+DICT_DEFINE 'HERE', fth_here
+
+fth_int3:
+	int3
+	ret
+DICT_DEFINE 'int3', fth_int3
 
 main:
 	; The Forth interpreter.
