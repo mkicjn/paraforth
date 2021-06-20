@@ -546,14 +546,57 @@ cstr_to_r:
 	ret
 
 
-;		Inliner
+;		Callers
 ;
 ; This is the core compilation mechanism.
-; The call-before-data technique is used for simplicity.
+; The call-before-data technique is used HEAVILY here.
+; 
+create_caller:
+	; Compile a call to `caller` at rdi.
+	;
+	;	Preconditions
+	; (none)
+	;
+	;	Postconditions
+	; rdi = rdi + 5
+	; Memory between old and new values of rdi modified.
+	call	caller		; (Beautiful!)
+	; NOTICE: Call-before-data applied
+caller:
+	; Compiles at rdi a call to a subroutine.
+	; Best used with the call-before-data technique.
+	;
+	;	Preconditions
+	; Address on stack (to subroutine to call)
+	;
+	;	Postconditions
+	; Address on stack consumed
+	; rdi = rdi + 5
+	; Memory between old and new values of rdi modified
+	; rbx clobbered
+	pop	rbx
+	add	rdi, 5
+	sub	rbx, rdi
+	mov	byte [rdi-5], 0xe8
+	mov	dword [rdi-4], ebx
+	ret
+;
+; Note the interesting result above: create_caller calls caller on itself!
+;
+
+
+
+;		Inliners
+;
+; This is the foundation of the primitives of this Forth implementation,
+; which should be inlined into the code as an optimization.
+;
+; The same call-before-data technique is used here.
 ; The first four bytes after the call represent the length of the subroutine.
 ;
 inliner:
 	; Inlines a subroutine at rdi
+	; Best used with call-before-data technique
 	;
 	;	Preconditions
 	; Address on stack (to doubleword length followed by code)
@@ -562,6 +605,7 @@ inliner:
 	; Address on stack consumed
 	; rdi = rdi + dword [[rsp]]
 	; Memory between old and new values of rdi modified
+	; rbx clobbered
 	pop	rbx
 	push	rsi			;{
 	mov	rsi, rbx
@@ -587,12 +631,39 @@ macro INLINE mac {
 	mac
 .end:
 }
-
+;
+; Now we can create inliners for all the stack operations from earlier.
+; The macro definitions for these are in the section marked "Stack Convention".
+;
 inline_dup:
 	INLINE DUP
+inline_drop:
+	INLINE DROP
+inline_swap:
+	INLINE SWAP
+inline_over:
+	INLINE OVER
+inline_nip:
+	INLINE NIP
+inline_tuck:
+	INLINE TUCK
+inline_ddup:
+	INLINE DDUP
+inline_ddrop:
+	INLINE DDROP
+;
 DICT_DEFINE 'DUP', inline_dup
+DICT_DEFINE 'DROP', inline_drop
+DICT_DEFINE 'SWAP', inline_swap
+DICT_DEFINE 'OVER', inline_over
+DICT_DEFINE 'NIP', inline_nip
+DICT_DEFINE 'TUCK', inline_tuck
+DICT_DEFINE 'DDUP', inline_ddup
+DICT_DEFINE 'DDROP', inline_ddrop
 
-; TODO: Add callers and replace existing words with callers or inliners
+
+
+; TODO: Replace existing Forth Core words with callers or inliners
 ; TODO: Add a mechanism for running the most recently compiled code
 
 
