@@ -496,8 +496,8 @@ macro DDROP {
 ;
 ; In a traditional Forth, `10` puts 10 on the stack or compiles DOLIT 10
 ; (depending on whether STATE indicates interpretation or compilation).
-; Here, `DEC 10` puts 10 on the stack and `PUSH` compiles a push instruction.
-; The interpreter is thus far simpler than a traditional Forth, because
+; Here, `DEC 10` always compiles a push 10 instruction.
+; The interpreter can then be far simpler than a traditional Forth, because
 ; the work is offloaded from the interpreter to the definition of DEC.
 ;
 ; TODO: What should happen if the input is invalid? i.e. `DEC 1A2B3C`
@@ -561,7 +561,7 @@ create_caller:
 	; rdi = rdi + 5
 	; Memory between old and new values of rdi modified.
 	call	caller		; (Beautiful!)
-	; NOTICE: Call-before-data applied
+	; NB: Call-before-data applied
 caller:
 	; Compiles at rdi a call to a subroutine.
 	; Best used with the call-before-data technique.
@@ -575,9 +575,21 @@ caller:
 	; Memory between old and new values of rdi modified
 	; rbx clobbered
 	pop	rbx
-	add	rdi, 5
+	mov	byte [rdi], 0xE8
+	inc	rdi
+	; NB: Intentional fallthrough
+put_offset:
+	; Compiles a 4-byte offset at rdi
+	;
+	;	Preconditions
+	; Pointer in rbx
+	;
+	;	Postconditions
+	; rdi = rdi + 4
+	; rbx = rbx - rdi
+	; dword [rdi-4] = ebx
+	add	rdi, 4
 	sub	rbx, rdi
-	mov	byte [rdi-5], 0xe8
 	mov	dword [rdi-4], ebx
 	ret
 ;
@@ -637,34 +649,35 @@ macro INLINE mac {
 ;
 inline_dup:
 	INLINE DUP
+DICT_DEFINE 'DUP', inline_dup
+;
 inline_drop:
 	INLINE DROP
+DICT_DEFINE 'DROP', inline_drop
+;
 inline_swap:
 	INLINE SWAP
+DICT_DEFINE 'SWAP', inline_swap
+;
 inline_over:
 	INLINE OVER
+DICT_DEFINE 'OVER', inline_over
+;
 inline_nip:
 	INLINE NIP
+DICT_DEFINE 'NIP', inline_nip
+;
 inline_tuck:
 	INLINE TUCK
+DICT_DEFINE 'TUCK', inline_tuck
+;
 inline_ddup:
 	INLINE DDUP
+DICT_DEFINE 'DDUP', inline_ddup
+;
 inline_ddrop:
 	INLINE DDROP
-;
-DICT_DEFINE 'DUP', inline_dup
-DICT_DEFINE 'DROP', inline_drop
-DICT_DEFINE 'SWAP', inline_swap
-DICT_DEFINE 'OVER', inline_over
-DICT_DEFINE 'NIP', inline_nip
-DICT_DEFINE 'TUCK', inline_tuck
-DICT_DEFINE 'DDUP', inline_ddup
 DICT_DEFINE 'DDROP', inline_ddrop
-
-
-
-; TODO: Replace existing Forth Core words with callers or inliners
-; TODO: Add a mechanism for running the most recently compiled code
 
 
 
@@ -674,10 +687,27 @@ DICT_DEFINE 'DDROP', inline_ddrop
 ;
 ; Subroutines using the Forth calling convention are named with a fth_ prefix
 ;
+; There are, in general, three types of words. Here's how to define them:
+; * Callers (regular words)
+;   * Start the subroutine with `call caller`.
+;   * Write the rest of the subroutine as normal.
+; * Inliners (copy into code)
+;   * Write a macro containing the code.
+;   * Do not use ENTER or EXIT, since it will get copied into the code.
+;   * Create a subroutine using the INLINER macro.
+; * Immediates (execute instead of compile)
+;   * Do none of the above.
+; After these steps, use DICT_DEFINE to expose it to the compiler.
+;
 
-DICT_DEFINE 'BYE', bye
+fth_bye:
+	call	caller
+	jmp	bye
+DICT_DEFINE 'BYE', fth_bye
 
-fth_word: ; ( "word" -- addr )
+fth_word: ; ( "word" -- c-addr )
+	call	caller
+fth_word_imm:
 	ENTER
 	DUP
 	inc	rdi
@@ -690,10 +720,12 @@ fth_word: ; ( "word" -- addr )
 DICT_DEFINE 'WORD', fth_word
 
 fth_find: ; ( c-addr -- xt|0 )
+	call	caller
 	jmp	dict_search
 DICT_DEFINE 'FIND', fth_find
 
 fth_define: ; ( xt c-addr -- )
+	call	caller
 	ENTER
 	call	dict_define
 	DDROP
@@ -702,6 +734,8 @@ fth_define: ; ( xt c-addr -- )
 DICT_DEFINE 'DEFINE', fth_define
 
 fth_execute: ; ( i*x xt -- j*x )
+	call	caller
+fth_execute_imm:
 	ENTER
 	mov	rbx, rax
 	DROP
@@ -709,17 +743,30 @@ fth_execute: ; ( i*x xt -- j*x )
 	jmp	rbx
 DICT_DEFINE 'EXECUTE', fth_execute
 
-fth_decimal: ; ( "number" -- n )
+fth_push: ; ( n -- )
 	ENTER
-	call	fth_word
+	mov	byte [rdi], 0x68
+	inc	rdi
+	mov	dword [rdi], eax
+	add	rdi, 4
+	DROP
+	EXIT
+	ret
+DICT_DEFINE 'PUSH', fth_push
+
+fth_decimal: ; ( "[0-9]+" -- n )
+	ENTER
+	call	fth_word_imm
 	push 	rdx
 	call	cstr_to_r
 	DROP ; ignore error
+	call	fth_push
 	EXIT
 	ret
 DICT_DEFINE 'DEC', fth_decimal
 
 fth_add: ; ( a b -- a+b )
+	call	caller
 	ENTER
 	add	rax, rdx
 	NIP
@@ -727,18 +774,28 @@ fth_add: ; ( a b -- a+b )
 	ret
 DICT_DEFINE '+', fth_add
 
-fth_here: ; ( -- c-addr )
-	ENTER
+macro HERE {
 	DUP
 	mov	rax, rdi
-	EXIT
-	ret
+}
+fth_here: ; ( -- addr )
+	INLINE HERE
 DICT_DEFINE 'HERE', fth_here
 
-fth_int3:
+fth_int3: ; ( -- )
 	int3
-	ret
 DICT_DEFINE 'int3', fth_int3
+
+fth_enter:
+	INLINE ENTER
+DICT_DEFINE 'ENTER', fth_enter
+
+fth_exit:
+	INLINE EXIT
+DICT_DEFINE 'EXIT', fth_exit
+
+; TODO: Add a mechanism for running the most recently compiled code
+;       Maybe call it fth_run, and invoke with `.`
 
 main:
 	; The Forth interpreter.
@@ -748,11 +805,12 @@ main:
 	;
 	;	Postconditions:
 	; (none; does not terminate)
-.loop:	call	fth_word
-	call	fth_find
+.loop:
+	call	fth_word_imm
+	call	dict_search
 	test	rax, rax
 	jz	.fail
-	call	fth_execute
+	call	fth_execute_imm
 	jmp	.loop
 .fail:
 	; TODO: Print offending word, drop remaining input, clear stack
