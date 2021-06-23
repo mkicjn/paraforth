@@ -436,6 +436,32 @@ macro DDROP {
 	pop	rdx
 }
 ;
+;	Return Stack Manipulation
+;
+; Ideally, the return stack will only be manipulated sparingly.
+; So, it isn't worth swapping the stack registers and using push/pop.
+; (This is part of the reason for ENTER and EXIT, defined above.)
+; This also simplifies the compiler; there's no question which stack is in rsp.
+; The alternative is, of course, sub+mov and mov+add (see Register Convention).
+; But, I want to avoid using the ALU, since it might be busy.
+; So, I use x86's lea instruction to avoid add and sub:
+;
+macro TO_R {
+	lea	rbp, [rbp-8]
+	mov	[rbp], rax
+	DROP
+}
+macro R_FETCH {
+	DUP
+	mov	rax, [rbp]
+}
+macro R_DROP {
+	lea	rbp, [rbp+8]
+}
+macro R_FROM {
+	R_FETCH
+	R_DROP
+}
 ;
 ;	Word Dispatch
 ;
@@ -678,6 +704,25 @@ DICT_DEFINE 'DDUP', inline_ddup
 inline_ddrop:
 	INLINE DDROP
 DICT_DEFINE 'DDROP', inline_ddrop
+;
+; We can do the same for return stack manipulation words:
+;
+inline_to_r:
+	INLINE TO_R
+DICT_DEFINE '>R', inline_to_r
+;
+inline_r_fetch:
+	INLINE R_FETCH
+DICT_DEFINE 'R@', inline_r_fetch
+;
+inline_r_drop:
+	INLINE R_DROP
+DICT_DEFINE 'RDROP', inline_r_drop
+;
+inline_r_from:
+	INLINE R_FROM
+DICT_DEFINE 'R>', inline_r_from
+;
 
 
 
