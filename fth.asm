@@ -392,7 +392,7 @@ setup:
 ; Note that not every subroutine needs to use ENTER and EXIT.
 ; Rule of thumb:
 ; * If you need to modify the data stack, use ENTER first.
-; * If you use ENTER, then you should use EXIT before returning.
+; * If you use ENTER, then you should use EXIT to return.
 macro ENTER {
 	; Push return address to stack at rbp
 	lea	rbp, [rbp-8]
@@ -402,6 +402,7 @@ macro EXIT {
 	; Pop return address from stack at rbp
 	push	qword [rbp]
 	lea	rbp, [rbp+8]
+	ret
 }
 ;
 ; Macros for common stack operations are defined here to aid in programming:
@@ -461,6 +462,18 @@ macro R_DROP {
 macro R_FROM {
 	R_FETCH
 	R_DROP
+}
+macro TO_TO_R {
+	lea	rbp, [rbp-16]
+	mov	[rbp], rax
+	mov	[rbp+8], rdx
+	DDROP
+}
+macro R_FROM_FROM {
+	DDUP
+	mov	rax, [rbp]
+	mov	rdx, [rbp+8]
+	lea	rbp, [rbp+16]
 }
 ;
 ;	Word Dispatch
@@ -522,11 +535,11 @@ macro R_FROM {
 ;
 ; In a traditional Forth, `10` puts 10 on the stack or compiles DOLIT 10
 ; (depending on whether STATE indicates interpretation or compilation).
-; Here, `DEC 10` always compiles a push 10 instruction.
+; Here, `# 10` always compiles a push 10 instruction.
 ; The interpreter can then be far simpler than a traditional Forth, because
-; the work is offloaded from the interpreter to the definition of DEC.
+; the work is offloaded from the interpreter to the definition of `#`.
 ;
-; TODO: What should happen if the input is invalid? i.e. `DEC 1A2B3C`
+; TODO: What should happen if the input is invalid? i.e. `# 1A2B3C`
 ;
 cstr_to_r:
 	; Convert a counted string to a register-sized integer
@@ -723,6 +736,14 @@ inline_r_from:
 	INLINE R_FROM
 DICT_DEFINE 'R>', inline_r_from
 ;
+inline_to_to_r:
+	INLINE TO_TO_R
+DICT_DEFINE '>>R', inline_to_to_r
+;
+inline_r_from_from:
+	INLINE R_FROM_FROM
+DICT_DEFINE 'R>>', inline_r_from_from
+;
 
 
 
@@ -761,7 +782,6 @@ fth_word_imm:
 	mov	[rdi], al
 	mov	rax, rdi
 	EXIT
-	ret
 DICT_DEFINE 'WORD', fth_word
 
 fth_find: ; ( c-addr -- xt|0 )
@@ -775,28 +795,28 @@ fth_define: ; ( xt c-addr -- )
 	call	dict_define
 	DDROP
 	EXIT
-	ret
 DICT_DEFINE 'DEFINE', fth_define
 
 fth_execute: ; ( i*x xt -- j*x )
 	call	caller
 fth_execute_imm:
-	ENTER
+	; ENTER and EXIT not used despite altering the stack.
+	; They are worked around instead for optimization purposes.
 	mov	rbx, rax
-	DROP
-	EXIT
+	mov	rax, rdx
+	mov	rdx, [rsp+8]
+	pop	qword [rsp] ; equivalent to 2>R NIP 2R>
 	jmp	rbx
 DICT_DEFINE 'EXECUTE', fth_execute
 
 fth_push: ; ( n -- )
 	ENTER
-	mov	byte [rdi], 0x68
+	call	inline_dup
+	mov	byte [rdi], 0xb8 ; mov eax
 	inc	rdi
-	mov	dword [rdi], eax
-	add	rdi, 4
+	stosd ; imm32
 	DROP
 	EXIT
-	ret
 DICT_DEFINE 'PUSH', fth_push
 
 fth_decimal: ; ( "[0-9]+" -- n )
@@ -807,8 +827,7 @@ fth_decimal: ; ( "[0-9]+" -- n )
 	DROP ; ignore error
 	call	fth_push
 	EXIT
-	ret
-DICT_DEFINE 'DEC', fth_decimal
+DICT_DEFINE '#', fth_decimal
 
 fth_add: ; ( a b -- a+b )
 	call	caller
@@ -816,7 +835,6 @@ fth_add: ; ( a b -- a+b )
 	add	rax, rdx
 	NIP
 	EXIT
-	ret
 DICT_DEFINE '+', fth_add
 
 macro HERE {
@@ -827,9 +845,12 @@ fth_here: ; ( -- addr )
 	INLINE HERE
 DICT_DEFINE 'HERE', fth_here
 
-fth_int3: ; ( -- )
-	int3
+fth_int3:
+	INLINE int3
 DICT_DEFINE 'int3', fth_int3
+fth_int3_imm:
+	int3
+DICT_DEFINE 'int3!', fth_int3_imm
 
 fth_enter:
 	INLINE ENTER
@@ -839,10 +860,30 @@ fth_exit:
 	INLINE EXIT
 DICT_DEFINE 'EXIT', fth_exit
 
-; TODO: Add a mechanism for running the most recently compiled code
-;       Maybe call it fth_run, and invoke with `.`
+; TODO: Add a mechanism for NOT running the most recently compiled code
+;       Probably invoke with `;`
+
+fth_run:
+	pop	rbx
+	EXIT
+DICT_DEFINE '.', fth_run
 
 main:
+	; BEGIN HERE >R
+	lea	rbp, [rbp-8]
+	mov	[rbp], rdi
+	; ENTER INTERP EXIT
+	call	fth_enter
+	call	interp
+	call	fth_exit
+	; R> DSP!
+	mov	rdi, [rbp]
+	lea	rbp, [rbp+8]
+	; HERE EXECUTE AGAIN
+	call	rdi
+	jmp	main
+
+interp:
 	; The Forth interpreter.
 	;
 	;	Preconditions:
@@ -850,6 +891,7 @@ main:
 	;
 	;	Postconditions:
 	; (none; does not terminate)
+	ENTER
 .loop:
 	call	fth_word_imm
 	call	dict_search
