@@ -791,6 +791,7 @@ DICT_DEFINE 'FIND', fth_find
 
 fth_define: ; ( xt c-addr -- )
 	call	caller
+fth_define_imm:
 	ENTER
 	call	dict_define
 	DDROP
@@ -806,7 +807,7 @@ fth_execute_imm:
 	mov	rax, rdx
 	mov	rdx, [rsp+8]
 	pop	qword [rsp] ; equivalent to 2>R NIP 2R>
-	jmp	rbx
+	jmp	rbx ; NB: Tail call to xt
 DICT_DEFINE 'EXECUTE', fth_execute
 
 fth_push: ; ( n -- )
@@ -863,34 +864,57 @@ DICT_DEFINE 'EXIT', fth_exit
 ; TODO: Add a mechanism for NOT running the most recently compiled code
 ;       Probably invoke with `;`
 
-fth_run:
-	pop	rbx
+fth_semicolon:
+	lea	rsp, [rsp+8] ; drop return address (to reader)
 	EXIT
-DICT_DEFINE '.', fth_run
+DICT_DEFINE ';', fth_semicolon
+
+fth_colon:
+	ENTER
+	HERE
+	call	fth_word_imm
+	call	fth_define_imm
+	call 	compiler
+	EXIT
+DICT_DEFINE ':', fth_colon
 
 main:
-	; BEGIN HERE >R
+	; Call the interpreter over and over forever
+	call	interpreter
+	jmp	main
+
+interpreter:
+	; Compile code, then run it when the user types `;` and loop
+	;
+	; HERE >R
+	ENTER
 	lea	rbp, [rbp-8]
 	mov	[rbp], rdi
 	; ENTER INTERP EXIT
 	call	fth_enter
-	call	interp
+	call	reader ; returns when user types `;`
 	call	fth_exit
 	; R> DSP!
 	mov	rdi, [rbp]
 	lea	rbp, [rbp+8]
-	; HERE EXECUTE AGAIN
+	; HERE EXECUTE
 	call	rdi
-	jmp	main
+	EXIT
 
-interp:
-	; The Forth interpreter.
+compiler:
+	; Replace "interpreter" with "compiler", compile code, then return when user types `;`
 	;
-	;	Preconditions:
-	; `setup` subroutine has been called
-	;
-	;	Postconditions:
-	; (none; does not terminate)
+	ENTER
+	lea	rbp, [rbp+32] ; Drop return addresses associated with interpreter
+	call	create_caller
+	call	fth_enter
+	call	reader
+	call	fth_exit
+	EXIT
+
+reader:
+	; Execute words from input in an "infinite" loop
+	; (Returns when an immediate word like `;` drops its return address)
 	ENTER
 .loop:
 	call	fth_word_imm
