@@ -846,12 +846,92 @@ fth_here: ; ( -- addr )
 	INLINE HERE
 DICT_DEFINE 'HERE', fth_here
 
+
+
+fth_begin: ; ( -- c-addr )
+	ENTER
+	; MARK<
+	HERE
+	EXIT
+DICT_DEFINE 'BEGIN', fth_begin
+
+fth_again: ; ( c-addr -- )
+	ENTER
+	; <RESOLVE
+	add	rdi, 5
+	mov	byte [rdi-5], 0xe9 ; jmp
+	sub	rax, rdi
+	mov	dword [rdi-4], eax ; rel32
+	DROP
+	EXIT
+DICT_DEFINE 'AGAIN', fth_again
+
+fth_ahead: ; ( -- c-addr )
+	ENTER
+	; MARK>
+	add	rdi, 5
+	mov	byte [rdi-5], 0xe9 ; jmp
+	DUP
+	mov	rax, rdi
+	EXIT
+DICT_DEFINE 'AHEAD', fth_ahead
+
+fth_then: ; ( c-addr -- )
+	; <RESOLVE
+	ENTER
+	mov	rbx, rdi
+	sub	rbx, rax
+	mov	dword [rax-4], ebx
+	DROP
+	EXIT
+DICT_DEFINE 'THEN', fth_then
+
+fth_if: ; ( -- c-addr)
+	ENTER
+	mov	dword [rdi], 0xc08548 ; test rax, rax
+	add	rdi, 3
+	call	inline_drop ; DROP
+	mov	word [rdi], 0x0574 ; jnz rip+5
+	add	rdi, 2
+	call	fth_ahead ; AHEAD
+	EXIT
+DICT_DEFINE 'IF', fth_if
+
+fth_else:
+	; IMMEDIATE
+	ENTER
+	; POSTPONE AHEAD
+	call	fth_ahead
+	; SWAP
+	SWAP
+	; POSTPONE THEN
+	call	fth_then
+	EXIT
+DICT_DEFINE 'ELSE', fth_else
+
+
+
+fth_allot:
+	call	caller
+	ENTER
+	add	rdi, rax
+	DROP
+	EXIT
+DICT_DEFINE 'ALLOT', fth_allot
+
+fth_immediate:
+	sub	rdi, 5 ; Undo compilation of `call caller`
+	ret
+DICT_DEFINE 'IMMEDIATE', fth_immediate
+
 fth_int3:
 	INLINE int3
 DICT_DEFINE 'int3', fth_int3
+
 fth_int3_imm:
 	int3
 DICT_DEFINE 'int3!', fth_int3_imm
+
 
 fth_enter:
 	INLINE ENTER
@@ -860,6 +940,7 @@ DICT_DEFINE 'ENTER', fth_enter
 fth_exit:
 	INLINE EXIT
 DICT_DEFINE 'EXIT', fth_exit
+
 
 ; TODO: Add a mechanism for NOT running the most recently compiled code
 ;       Probably invoke with `;`
