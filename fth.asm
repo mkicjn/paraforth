@@ -891,7 +891,7 @@ fth_if: ; ( -- c-addr)
 	mov	dword [rdi], 0xc08548 ; test rax, rax
 	add	rdi, 3
 	call	inline_drop ; DROP
-	mov	word [rdi], 0x0574 ; jnz rip+5
+	mov	word [rdi], 0x0575 ; jnz rip+5
 	add	rdi, 2
 	call	fth_ahead ; AHEAD
 	EXIT
