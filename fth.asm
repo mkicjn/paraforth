@@ -911,6 +911,39 @@ DICT_DEFINE 'ELSE', fth_else
 
 
 
+print_unsigned:
+	; Print rax as an unsigned integer.
+	;
+	;	Preconditions
+	; Integer in rax
+	;
+	;	Postconditions
+	; rax = 0
+	; rbx, rdx clobbered
+	mov	ebx, 10
+.loop:	xor	edx, edx
+	div	rbx
+	push	rdx
+	test	rax, rax
+	jz	.done
+	call	.loop
+.done:	pop	rax
+	add	rax, 48 ; '0'
+	call	tx_byte
+	ret
+
+fth_print_unsigned:
+	call	caller
+	ENTER
+	push	rdx
+	call	print_unsigned
+	pop	rdx
+	DROP
+	EXIT
+DICT_DEFINE 'U.', fth_print_unsigned
+
+
+
 fth_allot:
 	call	caller
 	ENTER
