@@ -8,7 +8,7 @@ All documentation and design notes are inside the assembly file as inline commen
 ## State of the Project (9/13/2021)
 
 It really *has* been difficult to make progress on this outside of work and life obligations.
-In fact, I think my last commit might have been while I was still at my parents' house.
+In fact, the second commit before today was while I was still at my parents' house.
 Now, I own my own home!
 
 Anyway, I had an epiphany last night that has given me some renewed motivation:
