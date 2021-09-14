@@ -222,7 +222,7 @@ parse_name:
 ; Byte:		0        1        N         N+8
 ; Contents:	| Length | String | Pointer |
 ;
-; A fixed max length was chosen as a compromise between several values:
+; A fixed maximum length was chosen as a compromise between several values:
 ;  * Simplicity: Good. No pointers and simple linear search (but backwards).
 ;  * Speed: Fair. O(n), but more cache friendly than a linked list.
 ;     * Does searching latest entries down mean better temporal locality?
@@ -298,6 +298,7 @@ dict_define:
 	pop	rcx			;}
 	ret
 
+fth_find_imm:  ; Alternate label, makes later code more readable
 dict_search:
 	; Searches for a dictionary entry.
 	;
@@ -515,13 +516,7 @@ macro R_FROM_FROM {
 ; The words `CALL` and `INLINE` are provided by the implementation at first,
 ; but can be defined in Forth later for bootstrapping purposes.
 ;
-;	Control Flow
-;
-; Jumps from one section of compiled code to another should be relative.
-; This relocatability aids in turnkey application generation.
-;
-; TODO
-
+; TODO: Move this set of notes to somewhere more relevant
 
 
 ;		Numeric Literals
@@ -614,6 +609,7 @@ caller:
 	; Memory between old and new values of rdi modified
 	; rbx clobbered
 	pop	rbx
+call_rbx:
 	mov	byte [rdi], 0xE8
 	inc	rdi
 	; NB: Intentional fallthrough
@@ -771,9 +767,26 @@ fth_bye:
 	jmp	bye
 DICT_DEFINE 'BYE', fth_bye
 
-fth_word: ; ( "word" -- c-addr )
+fth_tx:
 	call	caller
-fth_word_imm:
+	ENTER
+	call	tx_byte
+	DROP
+	EXIT
+DICT_DEFINE 'TX', fth_tx
+
+fth_rx:
+	call	caller
+	ENTER
+	DUP
+	call	rx_byte
+	EXIT
+DICT_DEFINE 'RX', fth_rx
+
+
+fth_word:
+	call	caller
+fth_word_imm: ; ( "word" -- c-addr )
 	ENTER
 	DUP
 	inc	rdi
@@ -786,7 +799,7 @@ DICT_DEFINE 'WORD', fth_word
 
 fth_find: ; ( c-addr -- xt|0 )
 	call	caller
-	jmp	dict_search
+	jmp	fth_find_imm ; Alternate label for dict_search
 DICT_DEFINE 'FIND', fth_find
 
 fth_define: ; ( xt c-addr -- )
@@ -810,7 +823,10 @@ fth_execute_imm:
 	jmp	rbx ; NB: Tail call to xt
 DICT_DEFINE 'EXECUTE', fth_execute
 
+
 fth_push: ; ( n -- )
+	call	caller
+fth_push_imm:
 	ENTER
 	call	inline_dup
 	mov	byte [rdi], 0xb8 ; mov eax
@@ -820,13 +836,25 @@ fth_push: ; ( n -- )
 	EXIT
 DICT_DEFINE 'PUSH', fth_push
 
+fth_call: ; ( xt -- )
+	call	caller
+fth_call_imm:
+	ENTER
+	mov	rbx, rax
+	DROP
+	call	call_rbx
+	EXIT
+DICT_DEFINE 'CALL', fth_call
+
+
 fth_decimal: ; ( "[0-9]+" -- n )
+	; IMMEDIATE
 	ENTER
 	call	fth_word_imm
 	push 	rdx
 	call	cstr_to_r
 	DROP ; ignore error
-	call	fth_push
+	call	fth_push_imm
 	EXIT
 DICT_DEFINE '#', fth_decimal
 
@@ -847,6 +875,11 @@ fth_here: ; ( -- addr )
 DICT_DEFINE 'HERE', fth_here
 
 
+;	Control Flow
+;
+; Jumps from one section of compiled code to another should be relative.
+; This relocatability aids in turnkey application generation.
+;
 
 fth_begin: ; ( -- c-addr )
 	ENTER
@@ -888,6 +921,7 @@ DICT_DEFINE 'THEN', fth_then
 
 fth_if: ; ( -- c-addr)
 	ENTER
+	; TODO: Is there a cleaner way to do this?
 	mov	dword [rdi], 0xc08548 ; test rax, rax
 	add	rdi, 3
 	call	inline_drop ; DROP
@@ -952,8 +986,9 @@ fth_allot:
 	EXIT
 DICT_DEFINE 'ALLOT', fth_allot
 
-fth_immediate:
-	sub	rdi, 5 ; Undo compilation of `call caller`
+fth_immediate: ; -5 ALLOT
+	;sub	rdi, 5 ; Undo compilation of `call caller`
+	mov	rdi, [rsi-8]
 	ret
 DICT_DEFINE 'IMMEDIATE', fth_immediate
 
@@ -975,8 +1010,6 @@ fth_exit:
 DICT_DEFINE 'EXIT', fth_exit
 
 
-; TODO: Add a mechanism for NOT running the most recently compiled code
-;       Probably invoke with `;`
 
 fth_semicolon:
 	lea	rsp, [rsp+8] ; drop return address (to reader)
@@ -1016,10 +1049,10 @@ interpreter:
 	EXIT
 
 compiler:
-	; Replace "interpreter" with "compiler", compile code, then return when user types `;`
+	; Replace interpreter context with compiler and return on `;`
 	;
 	ENTER
-	lea	rbp, [rbp+32] ; Drop return addresses associated with interpreter
+	lea	rbp, [rbp+32] ; Drop return addresses from interpreter context
 	call	create_caller
 	call	fth_enter
 	call	reader
@@ -1032,7 +1065,7 @@ reader:
 	ENTER
 .loop:
 	call	fth_word_imm
-	call	dict_search
+	call	fth_find_imm
 	test	rax, rax
 	jz	.fail
 	call	fth_execute_imm
@@ -1044,6 +1077,17 @@ reader:
 	DROP
 	jmp	.loop
 
+
+; TODO:
+;
+; More primitives needed:
+;       ,
+;       C,
+;
+; These words can already be defined by the user. Should I provide them instead?
+;
+;	: POSTPONE IMMEDIATE WORD FIND CALL ;
+;	: ' IMMEDIATE WORD FIND PUSH ;
 
 
 ;		Memory Map
