@@ -836,9 +836,8 @@ macro HERE {
 	DUP
 	mov	rax, rdi
 }
-fth_here: ; ( -- addr )
-	INLINE HERE
-DICT_DEFINE 'HERE', fth_here
+
+DICT_DEFINE_MACRO HERE, 'HERE', fth_here
 
 
 ;	Control Flow
