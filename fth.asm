@@ -682,63 +682,29 @@ macro INLINE mac {
 ; Now we can create inliners for all the stack operations from earlier.
 ; The macro definitions for these are in the section marked "Stack Convention".
 ;
-inline_dup:
-	INLINE DUP
-DICT_DEFINE 'DUP', inline_dup
+macro DICT_DEFINE_MACRO mac, str, label {
+	label:
+		INLINE mac
+	DICT_DEFINE str, label
+}
 ;
-inline_drop:
-	INLINE DROP
-DICT_DEFINE 'DROP', inline_drop
-;
-inline_swap:
-	INLINE SWAP
-DICT_DEFINE 'SWAP', inline_swap
-;
-inline_over:
-	INLINE OVER
-DICT_DEFINE 'OVER', inline_over
-;
-inline_nip:
-	INLINE NIP
-DICT_DEFINE 'NIP', inline_nip
-;
-inline_tuck:
-	INLINE TUCK
-DICT_DEFINE 'TUCK', inline_tuck
-;
-inline_ddup:
-	INLINE DDUP
-DICT_DEFINE 'DDUP', inline_ddup
-;
-inline_ddrop:
-	INLINE DDROP
-DICT_DEFINE 'DDROP', inline_ddrop
+DICT_DEFINE_MACRO DUP, 'DUP', inline_dup
+DICT_DEFINE_MACRO DROP, 'DROP', inline_drop
+DICT_DEFINE_MACRO SWAP, 'SWAP', inline_swap
+DICT_DEFINE_MACRO OVER, 'OVER', inline_over
+DICT_DEFINE_MACRO NIP, 'NIP', inline_nip
+DICT_DEFINE_MACRO TUCK, 'TUCK', inline_tuck
+DICT_DEFINE_MACRO DDUP, 'DDUP', inline_ddup
+DICT_DEFINE_MACRO DDROP, 'DDROP', inline_ddrop
 ;
 ; We can do the same for return stack manipulation words:
 ;
-inline_to_r:
-	INLINE TO_R
-DICT_DEFINE '>R', inline_to_r
-;
-inline_r_fetch:
-	INLINE R_FETCH
-DICT_DEFINE 'R@', inline_r_fetch
-;
-inline_r_drop:
-	INLINE R_DROP
-DICT_DEFINE 'RDROP', inline_r_drop
-;
-inline_r_from:
-	INLINE R_FROM
-DICT_DEFINE 'R>', inline_r_from
-;
-inline_to_to_r:
-	INLINE TO_TO_R
-DICT_DEFINE '>>R', inline_to_to_r
-;
-inline_r_from_from:
-	INLINE R_FROM_FROM
-DICT_DEFINE 'R>>', inline_r_from_from
+DICT_DEFINE_MACRO TO_R, '>R', inline_to_r
+DICT_DEFINE_MACRO R_FETCH, 'R@', inline_r_fetch
+DICT_DEFINE_MACRO R_DROP, 'RDROP', inline_r_drop
+DICT_DEFINE_MACRO R_FROM, 'R>', inline_r_from
+DICT_DEFINE_MACRO TO_TO_R, '>>R', inline_to_to_r
+DICT_DEFINE_MACRO R_FROM_FROM, 'R>>', inline_r_from_from
 ;
 
 
@@ -992,22 +958,17 @@ fth_immediate: ; -5 ALLOT
 	ret
 DICT_DEFINE 'IMMEDIATE', fth_immediate
 
-fth_int3:
-	INLINE int3
-DICT_DEFINE 'int3', fth_int3
+DICT_DEFINE_MACRO int3, 'int3', fth_int3
+; ^ Not actually a macro, but works because of FASM syntax
 
 fth_int3_imm:
 	int3
 DICT_DEFINE 'int3!', fth_int3_imm
 
 
-fth_enter:
-	INLINE ENTER
-DICT_DEFINE 'ENTER', fth_enter
+DICT_DEFINE_MACRO ENTER, 'ENTER', fth_enter
 
-fth_exit:
-	INLINE EXIT
-DICT_DEFINE 'EXIT', fth_exit
+DICT_DEFINE_MACRO EXIT, 'EXIT', fth_exit
 
 
 
