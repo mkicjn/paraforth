@@ -832,6 +832,7 @@ fth_add: ; ( a b -- a+b )
 	EXIT
 DICT_DEFINE '+', fth_add
 
+
 macro HERE {
 	DUP
 	mov	rax, rdi
@@ -839,6 +840,39 @@ macro HERE {
 
 DICT_DEFINE_MACRO HERE, 'HERE', fth_here
 
+
+macro FETCH {
+	mov	rax, [rax]
+}
+macro STORE {
+	mov	[rax], rdx
+	DDROP
+}
+macro CFETCH {
+	movzx	eax, byte [rax]
+}
+macro CSTORE {
+	mov	[rax], dl
+	DDROP
+}
+
+DICT_DEFINE_MACRO STORE, '!', fth_store
+DICT_DEFINE_MACRO FETCH, '@', fth_fetch
+DICT_DEFINE_MACRO CSTORE, 'C!', fth_cstore
+DICT_DEFINE_MACRO CFETCH, 'C@', fth_cfetch
+
+
+macro COMMA {
+	stosq
+	DROP
+}
+macro CCOMMA {
+	stosb
+	DROP
+}
+
+DICT_DEFINE_MACRO COMMA, ',', fth_comma
+DICT_DEFINE_MACRO CCOMMA, 'C,', fth_ccomma
 
 ;	Control Flow
 ;
