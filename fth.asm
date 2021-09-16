@@ -824,23 +824,72 @@ fth_decimal: ; ( "[0-9]+" -- n )
 	EXIT
 DICT_DEFINE '#', fth_decimal
 
-fth_add: ; ( a b -- a+b )
-	call	caller
-	ENTER
-	add	rax, rdx
-	NIP
-	EXIT
-DICT_DEFINE '+', fth_add
 
+;	Arithmetic/Logic Words
+;
+; TODO: Consider adding or removing built-in operations.
+; (How minimal do I want? Closer to eForth or more practical?)
+;
+; So far, I've tried to only keep operations that would be too slow otherwise,
+; whether it's difficult without a primitive, or just low-hanging fruit.
+;
+; TODO: Bit shifts (especially right shifts) fit the criteria, but are missing.
+; TODO: What's the best way to expose the carry bit to the language?
+;
+
+macro _ADD {
+	add	rdx, rax
+	DROP
+}
+; ^ Was originally written as `add rax, rdx; NIP`, which saves a `mov`,
+;   but doing so breaks compatibility with typical Forth systems.
+;   (`NEG +` should work as a substitute for `-`)
+macro _NEG {
+	neg	rax
+}
+macro _NOT {
+	not	rax
+}
+macro _AND {
+	and	rax, rdx
+	NIP
+}
+macro _OR {
+	or	rax, rdx
+	NIP
+}
+macro _XOR {
+	xor	rax, rdx
+	NIP
+}
+macro _ZLT {
+	sar	rax, 63
+}
+macro _ZEQ {
+	; TODO: Is this worth including? Or, is there a shorter definition?
+	test	rax, rax
+	setnz	al
+	dec	al
+	movsx	rax, al
+}
+
+DICT_DEFINE_MACRO _ADD, '+', fth_add
+DICT_DEFINE_MACRO _NEG, 'NEG', fth_neg
+DICT_DEFINE_MACRO _NOT, 'NOT', fth_not
+DICT_DEFINE_MACRO _AND, 'AND', fth_and
+DICT_DEFINE_MACRO _OR, 'OR', fth_or
+DICT_DEFINE_MACRO _XOR, 'XOR', fth_xor
+DICT_DEFINE_MACRO _ZLT, '0<', fth_zlt
+DICT_DEFINE_MACRO _ZEQ, '0=', fth_zeq
+
+
+;	Memory Words
+;
 
 macro HERE {
 	DUP
 	mov	rax, rdi
 }
-
-DICT_DEFINE_MACRO HERE, 'HERE', fth_here
-
-
 macro FETCH {
 	mov	rax, [rax]
 }
@@ -855,13 +904,6 @@ macro CSTORE {
 	mov	[rax], dl
 	DDROP
 }
-
-DICT_DEFINE_MACRO STORE, '!', fth_store
-DICT_DEFINE_MACRO FETCH, '@', fth_fetch
-DICT_DEFINE_MACRO CSTORE, 'C!', fth_cstore
-DICT_DEFINE_MACRO CFETCH, 'C@', fth_cfetch
-
-
 macro COMMA {
 	stosq
 	DROP
@@ -871,8 +913,14 @@ macro CCOMMA {
 	DROP
 }
 
+DICT_DEFINE_MACRO HERE, 'HERE', fth_here
+DICT_DEFINE_MACRO STORE, '!', fth_store
+DICT_DEFINE_MACRO FETCH, '@', fth_fetch
+DICT_DEFINE_MACRO CSTORE, 'C!', fth_cstore
+DICT_DEFINE_MACRO CFETCH, 'C@', fth_cfetch
 DICT_DEFINE_MACRO COMMA, ',', fth_comma
 DICT_DEFINE_MACRO CCOMMA, 'C,', fth_ccomma
+
 
 ;	Control Flow
 ;
@@ -1073,10 +1121,6 @@ reader:
 
 
 ; TODO:
-;
-; More primitives needed:
-;       ,
-;       C,
 ;
 ; These words can already be defined by the user. Should I provide them instead?
 ;
