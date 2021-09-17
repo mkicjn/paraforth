@@ -721,7 +721,7 @@ DICT_DEFINE_MACRO R_FROM_FROM, 'R>>', inline_r_from_from
 ;   * Write the rest of the subroutine as normal.
 ; * Inliners (copy into code)
 ;   * Write a macro containing the code.
-;   * Do not use ENTER or EXIT, since it will get copied into the code.
+;   * Do not use ENTER or EXIT, since it will already exist in the code.
 ;   * Create a subroutine using the INLINER macro.
 ; * Immediates (execute instead of compile)
 ;   * Do none of the above.
@@ -790,9 +790,15 @@ fth_execute_imm:
 DICT_DEFINE 'EXECUTE', fth_execute
 
 
-fth_push: ; ( n -- )
+fth_immediate: ; -5 ALLOT
+	;sub	rdi, 5 ; Undo compilation of `call caller`
+	mov	rdi, [rsi-8]
+	ret
+DICT_DEFINE 'IMMEDIATE', fth_immediate
+
+fth_literal: ; ( n -- )
 	call	caller
-fth_push_imm:
+fth_literal_imm:
 	ENTER
 	call	inline_dup
 	mov	byte [rdi], 0xb8 ; mov eax
@@ -800,17 +806,17 @@ fth_push_imm:
 	stosd ; imm32
 	DROP
 	EXIT
-DICT_DEFINE 'PUSH', fth_push
+DICT_DEFINE 'LITERAL', fth_literal
 
-fth_call: ; ( xt -- )
+fth_compile: ; ( xt -- )
 	call	caller
-fth_call_imm:
+fth_compile_imm:
 	ENTER
 	mov	rbx, rax
 	DROP
 	call	call_rbx
 	EXIT
-DICT_DEFINE 'CALL', fth_call
+DICT_DEFINE 'COMPILE', fth_compile
 
 
 fth_decimal: ; ( "[0-9]+" -- n )
@@ -820,7 +826,7 @@ fth_decimal: ; ( "[0-9]+" -- n )
 	push 	rdx
 	call	cstr_to_r
 	DROP ; ignore error
-	call	fth_push_imm
+	call	fth_literal_imm
 	EXIT
 DICT_DEFINE '#', fth_decimal
 
@@ -886,10 +892,6 @@ DICT_DEFINE_MACRO _ZEQ, '0=', fth_zeq
 ;	Memory Words
 ;
 
-macro HERE {
-	DUP
-	mov	rax, rdi
-}
 macro FETCH {
 	mov	rax, [rax]
 }
@@ -912,17 +914,26 @@ macro CCOMMA {
 	stosb
 	DROP
 }
+macro HERE {
+	DUP
+	mov	rax, rdi
+}
+macro ALLOT {
+	add	rdi, rax
+	DROP
+}
 
-DICT_DEFINE_MACRO HERE, 'HERE', fth_here
 DICT_DEFINE_MACRO STORE, '!', fth_store
 DICT_DEFINE_MACRO FETCH, '@', fth_fetch
 DICT_DEFINE_MACRO CSTORE, 'C!', fth_cstore
 DICT_DEFINE_MACRO CFETCH, 'C@', fth_cfetch
 DICT_DEFINE_MACRO COMMA, ',', fth_comma
 DICT_DEFINE_MACRO CCOMMA, 'C,', fth_ccomma
+DICT_DEFINE_MACRO HERE, 'HERE', fth_here
+DICT_DEFINE_MACRO ALLOT, 'ALLOT', fth_allot
 
 
-;	Control Flow
+;	Control Flow / Branching Words
 ;
 ; Jumps from one section of compiled code to another should be relative.
 ; This relocatability aids in turnkey application generation.
@@ -968,7 +979,7 @@ DICT_DEFINE 'THEN', fth_then
 
 fth_if: ; ( -- c-addr)
 	ENTER
-	; TODO: Is there a cleaner way to do this?
+	; TODO: This feels like a hack. There must be a more elegant way.
 	mov	dword [rdi], 0xc08548 ; test rax, rax
 	add	rdi, 3
 	call	inline_drop ; DROP
@@ -989,7 +1000,6 @@ fth_else:
 	call	fth_then
 	EXIT
 DICT_DEFINE 'ELSE', fth_else
-
 
 
 print_unsigned:
@@ -1024,21 +1034,6 @@ fth_print_unsigned:
 DICT_DEFINE 'U.', fth_print_unsigned
 
 
-
-fth_allot:
-	call	caller
-	ENTER
-	add	rdi, rax
-	DROP
-	EXIT
-DICT_DEFINE 'ALLOT', fth_allot
-
-fth_immediate: ; -5 ALLOT
-	;sub	rdi, 5 ; Undo compilation of `call caller`
-	mov	rdi, [rsi-8]
-	ret
-DICT_DEFINE 'IMMEDIATE', fth_immediate
-
 DICT_DEFINE_MACRO int3, 'int3', fth_int3
 ; ^ Not actually a macro, but works because of FASM syntax
 
@@ -1052,7 +1047,9 @@ DICT_DEFINE_MACRO ENTER, 'ENTER', fth_enter
 DICT_DEFINE_MACRO EXIT, 'EXIT', fth_exit
 
 
-
+; TODO: Do all of these need to be built in? It has been convenient like this,
+;       but is there an elegant way to define them from the language itself?
+;       Looks like `reader` is the only fundamental one. Investigate further.
 fth_semicolon:
 	lea	rsp, [rsp+8] ; drop return address (to reader)
 	EXIT
@@ -1118,14 +1115,6 @@ reader:
 	call	tx_byte
 	DROP
 	jmp	.loop
-
-
-; TODO:
-;
-; These words can already be defined by the user. Should I provide them instead?
-;
-;	: POSTPONE IMMEDIATE WORD FIND CALL ;
-;	: ' IMMEDIATE WORD FIND PUSH ;
 
 
 ;		Memory Map
