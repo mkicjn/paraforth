@@ -1146,7 +1146,6 @@ reader:
 	call	fth_execute_imm
 	jmp	.loop
 .fail:
-	; TODO: Print offending word, drop remaining input, clear stack
 	DROP
 	call	fth_count_imm
 	call	fth_type_imm
