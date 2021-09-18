@@ -1047,6 +1047,40 @@ DICT_DEFINE_MACRO ENTER, 'ENTER', fth_enter
 DICT_DEFINE_MACRO EXIT, 'EXIT', fth_exit
 
 
+fth_count: ; ( c-addr -- c-addr u )
+	call	caller
+fth_count_imm:
+	ENTER
+	DUP
+	movzx	eax, byte [rax]
+	inc	rdx
+	EXIT
+DICT_DEFINE 'COUNT', fth_count
+
+fth_type: ; ( c-addr u -- )
+	call	caller
+fth_type_imm:
+	ENTER
+	push	rsi ; {
+	mov	rcx, rax
+	mov	rsi, rdx
+.loop:	lodsb
+	call	tx_byte
+	loop	.loop
+	pop	rsi ; }
+	DDROP
+	EXIT
+DICT_DEFINE 'TYPE', fth_type
+
+fth_comment: ; ( "ccc<eol>" -- )
+	push	rax ; {
+.loop:	call	rx_byte
+	cmp	al, 0x0A ; '\n'
+	jne	.loop
+	pop	rax ; }
+DICT_DEFINE '\', fth_comment
+
+
 ; TODO: Do all of these need to be built in? It has been convenient like this,
 ;       but is there an elegant way to define them from the language itself?
 ;       Looks like `reader` is the only fundamental one. Investigate further.
@@ -1104,16 +1138,23 @@ reader:
 	ENTER
 .loop:
 	call	fth_word_imm
+	DUP
 	call	fth_find_imm
 	test	rax, rax
 	jz	.fail
+	NIP
 	call	fth_execute_imm
 	jmp	.loop
 .fail:
 	; TODO: Print offending word, drop remaining input, clear stack
+	DROP
+	call	fth_count_imm
+	call	fth_type_imm
 	mov	eax, 0x3F ; '?'
 	call	tx_byte
-	DROP
+	mov	eax, 0x20 ; ' '
+	call	tx_byte
+	call	fth_comment ; skip input until newline
 	jmp	.loop
 
 
