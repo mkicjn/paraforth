@@ -1,0 +1,22 @@
+\ I'm using this file to define words that are useful
+\ to start with, but not necessary to as primitives
+
+: POSTPONE  IMMEDIATE  WORD FIND COMPILE ;
+: '  IMMEDIATE  WORD FIND LITERAL ;
+
+: ELSE  IMMEDIATE  POSTPONE AHEAD  SWAP POSTPONE THEN  ;
+: WHILE  IMMEDIATE  POSTPONE IF  SWAP ;
+: REPEAT  IMMEDIATE  POSTPONE AGAIN  POSTPONE THEN ;
+\ TODO : FOR, AFT, NEXT
+
+: -  IMMEDIATE  POSTPONE NEG  POSTPONE + ;
+\ TODO : *, / (these should just be primitives, too messy otherwise)
+
+: =  IMMEDIATE  POSTPONE XOR  POSTPONE 0= ;
+: <> IMMEDIATE  POSTPONE =  POSTPONE NOT ;
+: <  IMMEDIATE  POSTPONE -  POSTPONE 0< ;
+: >  IMMEDIATE  POSTPONE SWAP  POSTPONE < ;
+: >=  IMMEDIATE  POSTPONE <  POSTPONE NOT ;
+: <=  IMMEDIATE  POSTPONE >  POSTPONE NOT ;
+
+: .  DUP 0< IF  # 45 TX NEG  THEN U. ;

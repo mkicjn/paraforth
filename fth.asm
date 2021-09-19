@@ -793,10 +793,10 @@ fth_execute_imm:
 	jmp	rbx ; NB: Tail call to xt
 DICT_DEFINE 'EXECUTE', fth_execute
 
-
-fth_immediate: ; -5 ALLOT
-	;sub	rdi, 5 ; Undo compilation of `call caller`
-	mov	rdi, [rsi-8]
+fth_immediate: ; -12 ALLOT ENTER
+	sub	rdi, 12 ; Undo compilation of `call caller` and `ENTER`
+	call	fth_enter ; Recompile enter to allow stack manipulations
+	;OR add	qword [rsi+defn_size-8], 5
 	ret
 DICT_DEFINE 'IMMEDIATE', fth_immediate
 
@@ -1009,18 +1009,6 @@ fth_until: ; ( -- c-addr )
 	DROP
 	EXIT
 DICT_DEFINE 'UNTIL', fth_until
-
-fth_else: ; TODO: This isn't strictly necessary to include. Should I remove it?
-	; IMMEDIATE
-	ENTER
-	; POSTPONE AHEAD
-	call	fth_ahead
-	; SWAP
-	SWAP
-	; POSTPONE THEN
-	call	fth_then
-	EXIT
-DICT_DEFINE 'ELSE', fth_else
 
 
 print_unsigned:
