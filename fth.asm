@@ -882,6 +882,16 @@ macro _ZEQ {
 	dec	al
 	movsx	rax, al
 }
+macro _MUL {
+	mul	rdx
+	NIP
+}
+macro _DIVMOD {
+	mov	rbx, rax
+	mov	rax, rdx
+	xor	edx, edx
+	div	rbx
+}
 
 DICT_DEFINE_MACRO _ADD, '+', fth_add
 DICT_DEFINE_MACRO _NEG, 'NEG', fth_neg
@@ -891,6 +901,8 @@ DICT_DEFINE_MACRO _OR, 'OR', fth_or
 DICT_DEFINE_MACRO _XOR, 'XOR', fth_xor
 DICT_DEFINE_MACRO _ZLT, '0<', fth_zlt
 DICT_DEFINE_MACRO _ZEQ, '0=', fth_zeq
+DICT_DEFINE_MACRO _MUL, '*', fth_mul
+DICT_DEFINE_MACRO _DIVMOD, '/MOD', fth_divmod
 
 
 ;	Memory Words

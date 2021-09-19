@@ -1,5 +1,5 @@
 \ I'm using this file to define words that are useful
-\ to start with, but not necessary to as primitives
+\ to start with, but not necessary to have as primitives
 
 : POSTPONE  IMMEDIATE  WORD FIND COMPILE ;
 : '  IMMEDIATE  WORD FIND LITERAL ;
@@ -10,7 +10,8 @@
 \ TODO : FOR, AFT, NEXT
 
 : -  IMMEDIATE  POSTPONE NEG  POSTPONE + ;
-\ TODO : *, / (these should just be primitives, too messy otherwise)
+: /  /MOD NIP ;
+: MOD  /MOD DROP ;
 
 : =  IMMEDIATE  POSTPONE XOR  POSTPONE 0= ;
 : <> IMMEDIATE  POSTPONE =  POSTPONE NOT ;
