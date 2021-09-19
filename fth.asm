@@ -273,6 +273,10 @@ dict_define:
 	; b[rsi..rsi+defn_size-9] = b[rax..rax+b[rax]+1],0...
 	; rax = rax+b[rax]+1
 	; rsi = rsi+defn_size
+	;
+	; TODO: Hyperstatic scope is broken because definitions enact at once.
+	;       Temporary fix in place. Need to find a better way.
+	;
 	push	rcx			;{
 	push	rdi			;{
 	; Shuffle values into appropriate regs
@@ -948,9 +952,9 @@ DICT_DEFINE 'BEGIN', fth_begin
 
 fth_again: ; ( c-addr -- )
 	ENTER
-	; <RESOLVE
+	; RESOLVE<
+	mov	byte [rdi], 0xe9 ; jmp (rel32)
 	add	rdi, 5
-	mov	byte [rdi-5], 0xe9 ; jmp
 	sub	rax, rdi
 	mov	dword [rdi-4], eax ; rel32
 	DROP
@@ -960,36 +964,53 @@ DICT_DEFINE 'AGAIN', fth_again
 fth_ahead: ; ( -- c-addr )
 	ENTER
 	; MARK>
+	mov	byte [rdi], 0xe9 ; jmp (rel32)
 	add	rdi, 5
-	mov	byte [rdi-5], 0xe9 ; jmp
 	DUP
 	mov	rax, rdi
 	EXIT
 DICT_DEFINE 'AHEAD', fth_ahead
 
 fth_then: ; ( c-addr -- )
-	; <RESOLVE
+	; RESOLVE>
 	ENTER
 	mov	rbx, rdi
 	sub	rbx, rax
-	mov	dword [rax-4], ebx
+	mov	dword [rax-4], ebx ; rel32
 	DROP
 	EXIT
 DICT_DEFINE 'THEN', fth_then
 
 fth_if: ; ( -- c-addr)
 	ENTER
-	; TODO: This feels like a hack. There must be a more elegant way.
+	; ?MARK>
 	mov	dword [rdi], 0xc08548 ; test rax, rax
 	add	rdi, 3
 	call	inline_drop ; DROP
-	mov	word [rdi], 0x0575 ; jnz rip+5
-	add	rdi, 2
-	call	fth_ahead ; AHEAD
+	; ( similar to AHEAD, but conditional )
+	mov	word [rdi], 0x840f ; jz (rel32)
+	add	rdi, 6
+	DUP
+	mov	rax, rdi
 	EXIT
 DICT_DEFINE 'IF', fth_if
 
-fth_else:
+fth_until: ; ( -- c-addr )
+	ENTER
+	; ?RESOLVE<
+	mov	dword [rdi], 0xc08548 ; test rax, rax
+	add	rdi, 3
+	call	inline_drop
+	; ( similar to AGAIN, but conditional )
+	mov	word [rdi], 0x840f ; jz (rel32)
+	add	rdi, 6
+	sub	rax, rdi
+	mov	dword [rdi-4], eax ; rel32
+	DROP
+	EXIT
+DICT_DEFINE 'UNTIL', fth_until
+
+fth_else: ; TODO: This isn't strictly necessary to include. Should I remove it?
 	; IMMEDIATE
 	ENTER
 	; POSTPONE AHEAD
@@ -1128,7 +1149,9 @@ compiler:
 	lea	rbp, [rbp+32] ; Drop return addresses from interpreter context
 	call	create_caller
 	call	fth_enter
+	sub	rsi, defn_size ; { (Temporary response to TODO in dict_define)
 	call	reader
+	add	rsi, defn_size ; }
 	call	fth_exit
 	EXIT
 
