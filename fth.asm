@@ -421,6 +421,7 @@ macro DROP {
 	pop	rdx
 }
 macro SWAP {
+	; On my machine, `xchg r, r` is as fast as 3 movs
 	xchg	rax, rdx
 }
 macro OVER {
@@ -449,8 +450,9 @@ macro DDROP {
 ; (This is part of the reason for ENTER and EXIT, defined above.)
 ; This also simplifies the compiler; there's no question which stack is in rsp.
 ; The alternative is, of course, sub+mov and mov+add (see Register Convention).
-; But, I want to avoid using the ALU, since it might be busy.
-; So, I use x86's lea instruction to avoid add and sub:
+; But, I want to avoid using the ALU, since it might be "busy".
+; So, I use the lea instruction to avoid add and sub in these cases.
+; (This is not really an issue with modern CPUs, but it costs the same anyway.)
 ;
 macro TO_R {
 	lea	rbp, [rbp-8]
@@ -757,6 +759,7 @@ DICT_DEFINE 'RX', fth_rx
 fth_word:
 	call	caller
 fth_word_imm: ; ( "word" -- c-addr )
+	; TODO: A more standard definition would lend itself to string printing
 	ENTER
 	DUP
 	inc	rdi
@@ -796,7 +799,7 @@ DICT_DEFINE 'EXECUTE', fth_execute
 fth_immediate: ; -12 ALLOT ENTER
 	sub	rdi, 12 ; Undo compilation of `call caller` and `ENTER`
 	call	fth_enter ; Recompile enter to allow stack manipulations
-	;OR add	qword [rsi+defn_size-8], 5
+	; TODO: Maybe this should just add 5 to the recent definition's XT
 	ret
 DICT_DEFINE 'IMMEDIATE', fth_immediate
 
