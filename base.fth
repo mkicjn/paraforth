@@ -16,7 +16,7 @@
 
 \	Explanation of branching words
 \ 
-\ This implementation only provides IF, AHEAD, THEN, BEGIN, UNTIL, and AHEAD.
+\ This implementation only provides IF, AHEAD, THEN, BEGIN, UNTIL, and AGAIN.
 \ These form a foundation for further definitions of branching words,
 \ and are (to me) more elegant than the typical branch/MARK/RESOLVE strategy.
 \ 
