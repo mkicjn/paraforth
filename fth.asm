@@ -773,7 +773,7 @@ DICT_DEFINE 'WORD', fth_word
 ;
 ; Another parsing word which is useful but not necessary is PARSE.
 ; Unlike WORD, PARSE is more general and works exactly like the standard.
-; (Well, except that it also places the word at the code pointer.
+; (Well, except that it also places the word at the compilation pointer.)
 ;
 fth_parse: ; ( delim "ccc<delim>" -- c-addr u )
 	call	caller
@@ -1086,7 +1086,7 @@ fth_print_unsigned:
 	pop	rdx
 	DROP
 	EXIT
-DICT_DEFINE 'U.', fth_print_unsigned
+DICT_DEFINE '%u', fth_print_unsigned
 
 
 DICT_DEFINE_MACRO int3, 'int3', fth_int3
