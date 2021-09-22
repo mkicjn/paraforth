@@ -119,38 +119,6 @@ tx_byte:
 
 
 
-;		Parser
-;
-; In my opinion, Forth has the simplest grammar of any high-level language.
-; In fact, I like to say it has one rule: "Words are delimited by whitespace."
-; That's one of the main reasons I chose this language as the core.
-;
-; Naturally, this grammar is implemented by a single parsing subroutine:
-;
-parse_name:
-	; Skip space, then read a space-delimited word from input into memory
-	; ("Space" is defined as ASCII characters less than or equal to ' ')
-	;
-	;	Preconditions:
-	; rdi = address to store word
-	;
-	;	Postconditions:
-	; rax = length of word
-.skip:	call	rx_byte
-	cmp	eax, 0x20 ; 0x20 = ' '
-	jle	.skip
-	push	rdi		;{
-.loop:	stosb
-	call	rx_byte
-	cmp	eax, 0x20 ; 0x20 = ' '
-	jg	.loop
-.done:	mov	rax, rdi
-	pop	rdi		;}
-	sub	rax, rdi
-	ret
-
-
-
 ;		Forbidden Assembly Techniques
 ;
 ; Fair warning: Two advanced assembly techniques will be used in this code.
@@ -756,19 +724,82 @@ fth_rx:
 DICT_DEFINE 'RX', fth_rx
 
 
+;		Parser
+;
+; In my opinion, Forth has the simplest grammar of any high-level language.
+; In fact, I like to say it has one rule: "Words are delimited by whitespace."
+; That's one of the main reasons I chose this language as the core.
+;
+; Naturally, this grammar is implemented by a single parsing word.
+; In this implementation, WORD functions like PARSE-NAME from a typical Forth.
+; My logic for this is that the WORD word should fetch a word from input.
+;
+; It returns a counted string because it is useless for names to be >255 bytes,
+; and because the FIND expects a counted string for simplicity.
+; In other words, "what else would you use WORD for?"
+;
 fth_word:
 	call	caller
-fth_word_imm: ; ( "word" -- c-addr )
+fth_word_imm: ; ( "<spaces>name<space>" -- c-addr )
 	; TODO: A more standard definition would lend itself to string printing
 	ENTER
 	DUP
-	inc	rdi
-	call	parse_name
-	dec	rdi
+	inc	rdi		;{
+.skip:	call	rx_byte
+	cmp	eax, 0x20 ; 0x20 = ' '
+	jle	.skip
+	push	rdi		;{
+.loop:	stosb
+	call	rx_byte
+	cmp	eax, 0x20 ; 0x20 = ' '
+	jg	.loop
+.done:	mov	rax, rdi
+	pop	rdi		;}
+	sub	rax, rdi
+	dec	rdi		;}
 	mov	[rdi], al
 	mov	rax, rdi
 	EXIT
 DICT_DEFINE 'WORD', fth_word
+;
+; Notice that this code stores input at rdi without changing it.
+; This presents some challenges and some benefits.
+; Challenges:
+; * We can't keep more than one word at a time, or
+; * retain a word after compiling code.
+; Benefits:
+; * It's simpler to store constant strings inline in the code, because
+;   we can skip it with AHEAD .. THEN and avoid having to relocate it.
+;
+; Another parsing word which is useful but not necessary is PARSE.
+; Unlike WORD, PARSE is more general and works exactly like the standard.
+; (Well, except that it also places the word at the code pointer.
+;
+fth_parse: ; ( delim "ccc<delim>" -- c-addr u )
+	call	caller
+fth_parse_imm:
+	ENTER
+	DDUP
+	mov	edx, eax
+	push	rdi		;{
+.loop:	call	rx_byte
+	cmp	al, dl
+	je	.done
+	stosb
+	jmp	.loop
+.done:	mov	rax, rdi
+	pop	rdi		;{
+	sub	rax, rdi
+	mov	rdx, rdi
+	EXIT
+DICT_DEFINE 'PARSE', fth_parse
+
+
+;
+; 		Forth Core, continued
+;
+; TODO: Categorize remaining definitions into sections.
+;
 
 fth_find: ; ( c-addr -- xt|0 )
 	call	caller
