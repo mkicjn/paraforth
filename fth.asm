@@ -741,7 +741,6 @@ DICT_DEFINE 'RX', fth_rx
 fth_word:
 	call	caller
 fth_word_imm: ; ( "<spaces>name<space>" -- c-addr )
-	; TODO: A more standard definition would lend itself to string printing
 	ENTER
 	DUP
 	inc	rdi		;{
@@ -877,17 +876,30 @@ DICT_DEFINE '#', fth_decimal
 ; So far, I've tried to only keep operations that would be too slow otherwise,
 ; whether it's difficult without a primitive, or just low-hanging fruit.
 ;
-; TODO: Bit shifts (especially right shifts) fit the criteria, but are missing.
 ; TODO: What's the best way to expose the carry bit to the language?
 ;
 
 macro _ADD {
-	add	rdx, rax
+; I have felt conflicted in the past on how exactly to implement this.
+; This way saves a mov instruction:
+	add	rax, rdx
+	NIP
+; But this way behaves more like standard implementations:
+;	add	rdx, rax
+;	DROP
+; The former method causes `NEGATE +` to behave as `SWAP -`.
+; Whereas, the latter method causes it to behave as a substitute for `-`.
+; This property is slightly nice, to avoid the need for a built in - word.
+; But, including it would be consistent with * and /MOD; no need to avoid it.
+;
+; After careful deliberation, I've decided to stick with the former.
+; With mov being "free" due to renaming, this is a negligible size optimization.
+; Plus, uses of `SWAP -` can do `NEGATE +` instead to avoid an xchg.
+}
+macro _SUB {
+	sub	rdx, rax
 	DROP
 }
-; ^ Was originally written as `add rax, rdx; NIP`, which saves a `mov`,
-;   but doing so breaks compatibility with typical Forth systems.
-;   (`NEG +` should work as a substitute for `-`)
 macro _NEG {
 	neg	rax
 }
@@ -928,6 +940,7 @@ macro _DIVMOD {
 }
 
 DICT_DEFINE_MACRO _ADD, '+', fth_add
+DICT_DEFINE_MACRO _SUB, '-', fth_sub
 DICT_DEFINE_MACRO _NEG, 'NEG', fth_neg
 DICT_DEFINE_MACRO _NOT, 'NOT', fth_not
 DICT_DEFINE_MACRO _AND, 'AND', fth_and
@@ -937,6 +950,29 @@ DICT_DEFINE_MACRO _ZLT, '0<', fth_zlt
 DICT_DEFINE_MACRO _ZEQ, '0=', fth_zeq
 DICT_DEFINE_MACRO _MUL, '*', fth_mul
 DICT_DEFINE_MACRO _DIVMOD, '/MOD', fth_divmod
+
+
+macro _2MUL {
+	sal	rax, 1
+}
+macro _2DIV {
+	sar	rax, 1
+}
+macro _SHL {
+	mov	cl, al
+	shl	rdx, cl
+	DROP
+}
+macro _SHR {
+	mov	cl, al
+	shr	rdx, cl
+	DROP
+}
+
+DICT_DEFINE_MACRO _2MUL, '2*', fth_2mul
+DICT_DEFINE_MACRO _2DIV, '2/', fth_2div
+DICT_DEFINE_MACRO _SHL, 'LSHIFT', fth_shl
+DICT_DEFINE_MACRO _SHR, 'RSHIFT', fth_shr
 
 
 ;	Memory Words
