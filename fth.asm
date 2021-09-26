@@ -900,6 +900,12 @@ macro _SUB {
 	sub	rdx, rax
 	DROP
 }
+macro _INC {
+	inc	rax
+}
+macro _DEC {
+	dec	rax
+}
 macro _NEG {
 	neg	rax
 }
@@ -928,30 +934,6 @@ macro _ZEQ {
 	dec	al
 	movsx	rax, al
 }
-macro _MUL {
-	mul	rdx
-	NIP
-}
-macro _DIVMOD {
-	mov	rbx, rax
-	mov	rax, rdx
-	xor	edx, edx
-	div	rbx
-}
-
-DICT_DEFINE_MACRO _ADD, '+', fth_add
-DICT_DEFINE_MACRO _SUB, '-', fth_sub
-DICT_DEFINE_MACRO _NEG, 'NEG', fth_neg
-DICT_DEFINE_MACRO _NOT, 'NOT', fth_not
-DICT_DEFINE_MACRO _AND, 'AND', fth_and
-DICT_DEFINE_MACRO _OR, 'OR', fth_or
-DICT_DEFINE_MACRO _XOR, 'XOR', fth_xor
-DICT_DEFINE_MACRO _ZLT, '0<', fth_zlt
-DICT_DEFINE_MACRO _ZEQ, '0=', fth_zeq
-DICT_DEFINE_MACRO _MUL, '*', fth_mul
-DICT_DEFINE_MACRO _DIVMOD, '/MOD', fth_divmod
-
-
 macro _2MUL {
 	sal	rax, 1
 }
@@ -968,11 +950,34 @@ macro _SHR {
 	shr	rdx, cl
 	DROP
 }
+macro _MUL {
+	mul	rdx
+	NIP
+}
+macro _DIVMOD {
+	mov	rbx, rax
+	mov	rax, rdx
+	xor	edx, edx
+	div	rbx
+}
 
+DICT_DEFINE_MACRO _ADD, '+', fth_add
+DICT_DEFINE_MACRO _SUB, '-', fth_sub
+DICT_DEFINE_MACRO _INC, '1+', fth_inc
+DICT_DEFINE_MACRO _DEC, '1-', fth_dec
+DICT_DEFINE_MACRO _NEG, 'NEGATE', fth_neg
+DICT_DEFINE_MACRO _NOT, 'NOT', fth_not
+DICT_DEFINE_MACRO _AND, 'AND', fth_and
+DICT_DEFINE_MACRO _OR, 'OR', fth_or
+DICT_DEFINE_MACRO _XOR, 'XOR', fth_xor
+DICT_DEFINE_MACRO _ZLT, '0<', fth_zlt
+DICT_DEFINE_MACRO _ZEQ, '0=', fth_zeq
 DICT_DEFINE_MACRO _2MUL, '2*', fth_2mul
 DICT_DEFINE_MACRO _2DIV, '2/', fth_2div
 DICT_DEFINE_MACRO _SHL, 'LSHIFT', fth_shl
 DICT_DEFINE_MACRO _SHR, 'RSHIFT', fth_shr
+DICT_DEFINE_MACRO _MUL, '*', fth_mul
+DICT_DEFINE_MACRO _DIVMOD, '/MOD', fth_divmod
 
 
 ;	Memory Words
@@ -1092,37 +1097,13 @@ fth_until: ; ( -- c-addr )
 	EXIT
 DICT_DEFINE 'UNTIL', fth_until
 
-
-print_unsigned:
-	; Print rax as an unsigned integer.
-	;
-	;	Preconditions
-	; Integer in rax
-	;
-	;	Postconditions
-	; rax = 0
-	; rbx, rdx clobbered
-	mov	ebx, 10
-.loop:	xor	edx, edx
-	div	rbx
-	push	rdx
-	test	rax, rax
-	jz	.done
-	call	.loop
-.done:	pop	rax
-	add	rax, 48 ; '0'
-	call	tx_byte
-	ret
-
-fth_print_unsigned:
-	call	caller
+fth_recurse: ; ( -- c-addr )
 	ENTER
-	push	rdx
-	call	print_unsigned
-	pop	rdx
-	DROP
+	DUP
+	mov	rax, [rsi-8+defn_size] ; See comment in compiler subroutine
+	call	fth_compile_imm
 	EXIT
-DICT_DEFINE '%u', fth_print_unsigned
+DICT_DEFINE 'RECURSE', fth_recurse
 
 
 DICT_DEFINE_MACRO int3, 'int3', fth_int3
@@ -1162,14 +1143,6 @@ fth_type_imm:
 	DDROP
 	EXIT
 DICT_DEFINE 'TYPE', fth_type
-
-fth_comment: ; ( "ccc<eol>" -- )
-	push	rax ; {
-.loop:	call	rx_byte
-	cmp	al, 0x0A ; '\n'
-	jne	.loop
-	pop	rax ; }
-DICT_DEFINE '\', fth_comment
 
 
 ; TODO: Do all of these need to be built in? It has been convenient like this,
@@ -1219,7 +1192,7 @@ compiler:
 	lea	rbp, [rbp+32] ; Drop return addresses from interpreter context
 	call	create_caller
 	call	fth_enter
-	sub	rsi, defn_size ; { (Temporary response to TODO in dict_define)
+	sub	rsi, defn_size ; { (Response to TODO in dict_define)
 	call	reader
 	add	rsi, defn_size ; }
 	call	fth_exit
@@ -1246,7 +1219,9 @@ reader:
 	call	tx_byte
 	mov	eax, 0x20 ; ' '
 	call	tx_byte
-	call	fth_comment ; skip input until newline
+.skip:	call	rx_byte ; Skip input until newline
+	cmp	al, 0x0A ; '\n'
+	jne	.skip
 	jmp	.loop
 
 
