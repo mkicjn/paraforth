@@ -140,42 +140,115 @@ main:
 	xor	edx, edx
 	xor	ebx, ebx
 	; See "Memory Map"
-	mov	rsp, dstack
-	mov	rbp, rstack
-	mov	rsi, dict
-	mov	rdi, space
+	lea	rsp, [dstack]
+	lea	rbp, [rstack]
+	lea	rsi, [dict]
+	lea	rdi, [space]
 
+	mov	rcx, rdi ; See link '.'
 .loop:	call	name
 	call	find
-	call	rax
+	mov	rbx, rax
+	DROP
+	call	rbx
 	jmp	.loop
+
+
+;		Temporary Words
+;
+; These words may not exist in the same form in the future.
+
+link '.' ; Runs anonymously compiled code
+	; immediate
+dot:	call	exit_
+	mov	rdi, rcx
+	jmp	rcx
+
+link 'int3'
+	; immediate
+imm_int3:
+	int3
+	ret
+
+
+;		Compilation Utilities
+
+link 'CALLER'
+	call	caller
+caller:
+	pop	rbx
+	lea	rdi, [rdi+5]
+	sub	rbx, rdi
+	mov	byte [rdi-5], 0xe8
+	mov	dword [rdi-4], ebx
+	ret
+
+inliner:
+	pop	rbx
+	PUSHA	rcx, rsi ;{
+	movzx	ecx, byte [rbx]
+	lea	rsi, [rbx-5]
+	sub	rsi, rcx
+	rep movsb
+	POPA	rcx, rsi ;}
+	ret
+
+macro INLINE mac {
+	local .again, .then
+	jmp	.then
+.again:	mac
+.then:	call	inliner ; doesn't return
+	db .then - .again
+}
+; ^ Later, I will want it to work like this:
+;   : CALLER  R> CALL$ ;
+;   : INLINE  CALLER OVER - HERE MOVE ; IMMEDIATE
+;   : INLINE{  POSTPONE AHEAD HERE SWAP ; IMMEDIATE
+;   : }INLINE  HERE SWAP POSTPONE THEN 2LITERAL INLINE ; IMMEDIATE
+
+
+;		Primitives
+;
+; An underscore following the name indicates that the subroutine compiles code.
+; This convention is much like much like `,` in Forth.
+
+link 'ENTER'
+enter_:	INLINE ENTER
+
+link 'EXIT'
+exit_:	INLINE EXIT
+
+link 'DUP'
+dup_:	INLINE DUP
+
+link 'DROP'
+drop_:	INLINE DROP
 
 
 ;		Built-Ins
 ;
-; TODO: Implement COMPILE, LITERAL, and primitive inlining
 
 link 'BYE'
-bye:
-	jmp	stop
+	call	caller
+bye:	jmp	stop
 
 link 'RX'
-rx:
-	ENTER
+	call	caller
+rx:	ENTER
 	DUP
 	call	rx_byte
 	EXIT
 
 link 'TX'
-tx:
-	ENTER
+	call	caller
+tx:	ENTER
 	call	tx_byte
 	DROP
 	EXIT
 
 link 'FIND'
-find:
-	; rax: counted string
+	call	caller
+find:	; rax: counted string
 	; rsi: latest link
 	; rax = xt or null
 	PUSHA rcx, rdi, rsi ;{
@@ -197,8 +270,8 @@ find:
 	ret
 
 link 'NAME,'
-namecomma:
-	; rdi: compilation area
+	call	caller
+name_:	; rdi: compilation area
 	; rdi += length of counted name string
 	; rbx clobbered
 	push	rax ;{ prev val
@@ -219,26 +292,33 @@ namecomma:
 	pop	rax ;} prev val
 	ret
 
-link 'DEFINE'
-defn:
-	mov	[rdi], rsi
+link ':'
+	; immediate
+col_:	mov	[rdi], rsi
 	mov	rsi, rdi
 	lea	rdi, [rdi+8]
-	call	namecomma
+	call	name_
+	call	enter_
+	ret
+
+link ';'
+	; immediate
+scol_:	call	exit_
+	mov	rcx, rdi ; See link '.'
 	ret
 
 link 'NAME'
-name:
-	ENTER
+	call	caller
+name:	ENTER
 	DUP
 	mov	rax, rdi
-	call	namecomma
+	call	name_
 	mov	rdi, rax
 	EXIT
 
 link 'DIGIT'
-digit:
-	; al: digit ASCII character [0-9A-Za-z]
+	call	caller
+digit:	; al: digit ASCII character [0-9A-Za-z]
 	; rax = digit value (bases 2-36)
 	cmp	al, 0x39 ; '9'
 	jg	.gt9
@@ -250,9 +330,19 @@ digit:
 .ret:	movsx	rax, al
 	ret ; invalid characters return <0 or >35
 
+link 'LITERAL'
+	call	caller
+lit_:	ENTER
+	call	dup_
+	mov	word [rdi], 0xb848
+	lea	rdi, [rdi+2]
+	stosq
+	DROP
+	EXIT
+
 link '$'
-hex:
-	ENTER
+	; immediate
+hex_:	ENTER
 	DUP
 	call	name
 	PUSHA rcx, rdx, rsi ;{
@@ -267,11 +357,12 @@ hex:
 	loop	.loop
 	mov	rax, rdx
 	POPA rcx, rdx, rsi ;}
+	call	lit_
 	EXIT
 
 link 'C,'
-cput:
-	ENTER
+	call	caller
+c_:	ENTER
 	stosb
 	DROP
 	EXIT
