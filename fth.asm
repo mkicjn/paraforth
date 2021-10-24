@@ -136,7 +136,6 @@ macro ROT {
 
 main:
 	xor	eax, eax
-	xor	ecx, ecx
 	xor	edx, edx
 	xor	ebx, ebx
 	; See "Memory Map"
@@ -158,9 +157,11 @@ main:
 ;
 ; These words may not exist in the same form in the future.
 
-link '.' ; Runs anonymously compiled code
+link '.'
 	; immediate
-dot:	call	exit_
+dot: 	; Runs anonymously compiled code
+	ENTER
+	call	exit_
 	mov	rdi, rcx
 	jmp	rcx
 
