@@ -5,6 +5,14 @@
 
 All documentation and design notes are inside the assembly file as inline comments.
 
+## State of the Project (10/23/2021)
+
+I've been experimenting with a potential reimplementation of this project, hence the lack of recent commits.
+This new version would reframe the project as a self-bootstrapping assembler and metacompiler.
+So far, there are a few internal differences, but resulting language should turn out roughly the same.
+
+The "experimental" branch will contain the files associated with these efforts.
+
 ## State of the Project (9/13/2021)
 
 It really *has* been difficult to make progress on this outside of work and life obligations.
