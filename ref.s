@@ -47,6 +47,7 @@ test_label:
 	div	rbx
 
 	repe cmpsb
+	rep movsb
 
 	dec	rcx
 	inc	rcx

@@ -132,6 +132,37 @@ macro ROT {
 	DPUSH	rbx
 }
 
+
+;		Arithmetic/Logic Operations
+;
+; These appear to be the minimal set necessary to implement an assembler in Forth.
+; This was determined over the course of writing proto_asm.fth, which runs in Gforth.
+
+macro ADD {
+	add	rax, rdx
+	NIP
+}
+macro SUB {
+	sub	rdx, rax
+	DROP
+}
+; Shifts are pretty long. Should they be subroutines?
+macro LSHIFT {
+	mov	rbx, rcx
+	mov	ecx, eax
+	shl	rdx, cl
+	mov	rcx, rbx
+	DROP
+}
+macro RSHIFT {
+	mov	rbx, rcx
+	mov	ecx, eax
+	shr	rdx, cl
+	mov	rcx, rbx
+	DROP
+}
+
+
 ;		Main Subroutine
 
 main:
@@ -144,26 +175,18 @@ main:
 	lea	rsi, [dict]
 	lea	rdi, [space]
 
-	mov	rcx, rdi ; See link '.'
 .loop:	call	name
 	call	find
+	test	rax, rax
+	jz	.err
 	mov	rbx, rax
 	DROP
 	call	rbx
 	jmp	.loop
-
-
-;		Temporary Words
-;
-; These words may not exist in the same form in the future.
-
-link '.'
-	; immediate
-dot: 	; Runs anonymously compiled code
-	ENTER
-	call	exit_
-	mov	rdi, rcx
-	jmp	rcx
+.err:	mov	al, 0x3f ; '?'
+	call	tx_byte
+	DROP
+	jmp	.loop
 
 link 'int3'
 	; immediate
@@ -173,8 +196,9 @@ imm_int3:
 
 
 ;		Compilation Utilities
+;
 
-link 'CALLER'
+link '(CALL)'
 	call	caller
 caller:
 	pop	rbx
@@ -184,6 +208,8 @@ caller:
 	mov	dword [rdi-4], ebx
 	ret
 
+; TODO: Now that the assembler is taking shape, why bother inlining anything so quickly?
+;       It's all going to be reimplemented later anyway...
 inliner:
 	pop	rbx
 	PUSHA	rcx, rsi ;{
@@ -225,12 +251,27 @@ dup_:	INLINE DUP
 link 'DROP'
 drop_:	INLINE DROP
 
+link 'SWAP'
+swap_:	INLINE SWAP
+
+link '+'
+add_:	INLINE ADD
+
+link '-'
+sub_:	INLINE SUB
+
+link 'LSHIFT'
+lsh_:	INLINE LSHIFT
+
+link 'RSHIFT'
+rsh_:	INLINE RSHIFT
+
 
 ;		Built-Ins
 ;
 
 link 'BYE'
-	call	caller
+	;call	caller
 bye:	jmp	stop
 
 link 'RX'
@@ -253,7 +294,6 @@ find:	; rax: counted string
 	; rsi: latest link
 	; rax = xt or null
 	PUSHA rcx, rdi, rsi ;{
-	; TODO: Try caching string length for resetting search strings, as in fth.asm. Might save instructions?
 .loop:	test	rsi, rsi	; null check
 	jz	.done
 	push	rsi		; push link from rsi
@@ -293,19 +333,12 @@ name_:	; rdi: compilation area
 	pop	rax ;} prev val
 	ret
 
-link ':'
+link 'DEF'
 	; immediate
-col_:	mov	[rdi], rsi
+def_:	mov	[rdi], rsi
 	mov	rsi, rdi
 	lea	rdi, [rdi+8]
 	call	name_
-	call	enter_
-	ret
-
-link ';'
-	; immediate
-scol_:	call	exit_
-	mov	rcx, rdi ; See link '.'
 	ret
 
 link 'NAME'
