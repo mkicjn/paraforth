@@ -1,43 +1,6 @@
 format elf64 executable
 entry start
 
-start:
-	call	main
-stop:
-	mov	edi, eax
-	mov	eax, 60
-	syscall
-
-
-;		Serial I/O
-
-macro PUSHA [arg] {forward push arg}
-macro POPA [arg] {reverse pop arg}
-
-byte_buf:
-	rb 1
-rx_byte:
-	PUSHA rdx, rdi, rsi, rcx, r11 ;{
-	xor	eax, eax	; syscall no.	(sys_read)
-	xor	edi, edi	; fd		(stdin)
-	mov	edx, 1		; count		(1)
-	lea	rsi, [byte_buf]	; buf		(byte_buf)
-	syscall
-	movzx	eax, byte [byte_buf]
-	POPA rdx, rdi, rsi, rcx, r11 ;}
-	ret
-tx_byte:
-	PUSHA rdx, rdi, rsi, rcx, r11 ;{
-	lea	rsi, [byte_buf]	; buf		(same buffer as before)
-	mov	[rsi], al
-	mov	eax, 1		; syscall no.	(sys_write)
-	mov	edi, 1		; fd		(stdout)
-	mov	edx, 1		; count		(1)
-	syscall
-	POPA rdx, rdi, rsi, rcx, r11 ;}
-	ret
-
-
 ;		Register Convention
 ;
 ; rax = cached top-of-stack
@@ -48,6 +11,45 @@ tx_byte:
 ; rsp = data stack
 ; rsi = latest link (see "Dictionary Structure")
 ; rdi = compile area
+
+macro PUSHA [arg] {forward push arg}
+macro POPA [arg] {reverse pop arg}
+
+
+;		System Interface
+;
+; If this tool is ever ported to another OS, hopefully only this section needs rewritten.
+; To work, the following subroutines should behave the same as on Linux: start, stop, rx_byte, tx_byte
+
+start:
+	call	main
+stop:
+	mov	edi, eax
+	mov	eax, 60
+	syscall
+
+byte_buf:
+	rb 1
+rx_byte:
+	PUSHA rcx, rdx, rsi, rdi, r11 ;{
+	xor	eax, eax	; syscall no.	(sys_read)
+	xor	edi, edi	; fd		(stdin)
+	mov	edx, 1		; count		(1)
+	lea	rsi, [byte_buf]	; buf		(byte_buf)
+	syscall
+	movzx	eax, byte [byte_buf]
+	POPA rcx, rdx, rsi, rdi, r11 ;}
+	ret
+tx_byte:
+	PUSHA rcx, rdx, rsi, rdi, r11 ;{
+	lea	rsi, [byte_buf]	; buf		(same buffer as before)
+	mov	[rsi], al
+	mov	eax, 1		; syscall no.	(sys_write)
+	mov	edi, 1		; fd		(stdout)
+	mov	edx, 1		; count		(1)
+	syscall
+	POPA rcx, rdx, rsi, rdi, r11 ;}
+	ret
 
 
 ;		Dictionary Structure
@@ -72,6 +74,9 @@ macro link str {
 
 
 ;		Stack Model
+;
+; This implementation has a prologue and epilogue to handle the second stack.
+; That way, the hardware push/pop instructions can be used for the data stack.
 
 macro ENTER {
 	; Subroutine prologue (use at each entry)
@@ -114,6 +119,7 @@ macro DROP {
 }
 macro SWAP {
 	xchg	rax, rdx
+	; ^ There's a special encoding for xchg rax, r64
 }
 macro NIP {
 	DPOP	rdx
@@ -163,12 +169,19 @@ macro RSHIFT {
 }
 
 
+;		Memory Operations
+;
+; It turns out that `C,` is the only necessary memory operation to write an assembler.
+
+macro C_ {
+	stosb
+	DROP
+}
+
+
 ;		Main Subroutine
 
 main:
-	xor	eax, eax
-	xor	edx, edx
-	xor	ebx, ebx
 	; See "Memory Map"
 	lea	rsp, [dstack]
 	lea	rbp, [rstack]
@@ -177,30 +190,22 @@ main:
 
 .loop:	call	name
 	call	find
-	test	rax, rax
-	jz	.err
 	mov	rbx, rax
 	DROP
 	call	rbx
 	jmp	.loop
-.err:	mov	al, 0x3f ; '?'
-	call	tx_byte
-	DROP
-	jmp	.loop
-
-link 'int3'
-	; immediate
-imm_int3:
-	int3
-	ret
+; ^ No error checking for now.
+; When the compiler gets redefined later, it will be more featureful.
 
 
 ;		Compilation Utilities
 ;
+; These make use of a technique I refer to as the "call before data" pattern.
+; This saves some parameter passing by using the return address as an operand.
 
 link '(CALL)'
 	call	caller
-caller:
+caller: ; call before data
 	pop	rbx
 	lea	rdi, [rdi+5]
 	sub	rbx, rdi
@@ -208,9 +213,7 @@ caller:
 	mov	dword [rdi-4], ebx
 	ret
 
-; TODO: Now that the assembler is taking shape, why bother inlining anything so quickly?
-;       It's all going to be reimplemented later anyway...
-inliner:
+inliner: ; call before data
 	pop	rbx
 	PUSHA	rcx, rsi ;{
 	movzx	ecx, byte [rbx]
@@ -224,66 +227,64 @@ macro INLINE mac {
 	local .again, .then
 	jmp	.then
 .again:	mac
-.then:	call	inliner ; doesn't return
+.then:	call	inliner
 	db .then - .again
 }
-; ^ Later, I will want it to work like this:
-;   : CALLER  R> CALL$ ;
-;   : INLINE  CALLER OVER - HERE MOVE ; IMMEDIATE
-;   : INLINE{  POSTPONE AHEAD HERE SWAP ; IMMEDIATE
-;   : }INLINE  HERE SWAP POSTPONE THEN 2LITERAL INLINE ; IMMEDIATE
 
 
 ;		Primitives
+;
+; These are the fundamental building blocks of the langauge.
+; They are inlined automatically for efficiency.
 ;
 ; An underscore following the name indicates that the subroutine compiles code.
 ; This convention is much like much like `,` in Forth.
 
 link 'ENTER'
 enter_:	INLINE ENTER
-
 link 'EXIT'
 exit_:	INLINE EXIT
 
 link 'DUP'
 dup_:	INLINE DUP
-
 link 'DROP'
 drop_:	INLINE DROP
-
 link 'SWAP'
 swap_:	INLINE SWAP
 
 link '+'
 add_:	INLINE ADD
-
 link '-'
 sub_:	INLINE SUB
-
 link 'LSHIFT'
 lsh_:	INLINE LSHIFT
-
 link 'RSHIFT'
 rsh_:	INLINE RSHIFT
+
+link 'C,'
+c_:	INLINE C_
 
 
 ;		Built-Ins
 ;
+; This is the remaining critical infrastructure for the seed language.
+; These are not inlined because their subroutine calls cannot easily be relocated.
+; (They could have far jumps instead, but what's the point?)
 
 link 'BYE'
-	;call	caller
-bye:	jmp	stop
+	call	caller
+bye: 	jmp	stop
 
 link 'RX'
 	call	caller
-rx:	ENTER
+rx: 	ENTER
 	DUP
 	call	rx_byte
 	EXIT
 
 link 'TX'
 	call	caller
-tx:	ENTER
+tx: 	ENTER
 	call	tx_byte
 	DROP
 	EXIT
@@ -297,7 +298,7 @@ find:	; rax: counted string
 .loop:	test	rsi, rsi	; null check
 	jz	.done
 	push	rsi		; push link from rsi
-	add	rsi, 8		; get counted str ptr
+	lea	rsi, [rsi+8]	; get counted str ptr
 	movzx	ecx, byte [rsi]	; load count
 	inc	ecx		; (include length byte)
 	mov	rdi, rax	; load search term
@@ -320,11 +321,11 @@ name_:	; rdi: compilation area
 	inc	rdi
 .skip:	call	rx_byte
 	cmp	al, 0x20
-	jle	.skip
+	jbe	.skip
 .store:	stosb
 	call	rx_byte
 	cmp	al, 0x20
-	jg	.store
+	ja	.store
 	mov	[rdi], al ; store following space
 	pop	rax ;} len byte
 	lea	rbx, [rdi-1]
@@ -355,14 +356,14 @@ link 'DIGIT'
 digit:	; al: digit ASCII character [0-9A-Za-z]
 	; rax = digit value (bases 2-36)
 	cmp	al, 0x39 ; '9'
-	jg	.gt9
+	ja	.gt9
 	sub	al, 0x30 ; '0'
 	jmp	.ret
 .gt9:	dec	al
 	and	al, 0xdf ; ~0x20; toupper
 	sub	al, 0x36 ; 'A'-10-1
-.ret:	movsx	rax, al
-	ret ; invalid characters return <0 or >35
+.ret:	movzx	eax, al
+	ret ; invalid characters return >35
 
 link 'LITERAL'
 	call	caller
@@ -392,13 +393,6 @@ hex_:	ENTER
 	mov	rax, rdx
 	POPA rcx, rdx, rsi ;}
 	call	lit_
-	EXIT
-
-link 'C,'
-	call	caller
-c_:	ENTER
-	stosb
-	DROP
 	EXIT
 
 

@@ -52,4 +52,7 @@ test_label:
 	dec	rcx
 	inc	rcx
 
+	push	rdx
+	pop	rdx
+
 	ret
