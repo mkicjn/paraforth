@@ -1,3 +1,4 @@
+; Assemble with FASM
 format elf64 executable
 entry start
 
@@ -19,18 +20,17 @@ macro POPA [arg] {reverse pop arg}
 ;		System Interface
 ;
 ; If this tool is ever ported to another OS, hopefully only this section needs rewritten.
-; To work, the following subroutines should behave the same as on Linux: start, stop, rx_byte, tx_byte
+; To work, the following subroutines should behave the same as on Linux: sys_halt, sys_rx, sys_tx
+; (Both subroutines are only allowed to clobber rax)
 
-start:
-	call	main
-stop:
+sys_halt:
 	mov	edi, eax
 	mov	eax, 60
 	syscall
 
 byte_buf:
 	rb 1
-rx_byte:
+sys_rx:
 	PUSHA rcx, rdx, rsi, rdi, r11 ;{
 	xor	eax, eax	; syscall no.	(sys_read)
 	xor	edi, edi	; fd		(stdin)
@@ -40,7 +40,7 @@ rx_byte:
 	movzx	eax, byte [byte_buf]
 	POPA rcx, rdx, rsi, rdi, r11 ;}
 	ret
-tx_byte:
+sys_tx:
 	PUSHA rcx, rdx, rsi, rdi, r11 ;{
 	lea	rsi, [byte_buf]	; buf		(same buffer as before)
 	mov	[rsi], al
@@ -58,11 +58,11 @@ tx_byte:
 ; Each link is just a pointer to the previous link and a counted string.
 
 macro counted str {
-local start, end
-	db end-start
-start:
+local a, b
+	db b - a
+a:
 	db str
-end:
+b:
 }
 
 latest = 0
@@ -103,7 +103,6 @@ macro RPOP reg {
 	mov	reg, [rbp]
 	lea	rbp, [rbp+8]
 }
-
 
 ;		Stack Operations
 ;
@@ -179,14 +178,16 @@ macro C_ {
 }
 
 
-;		Main Subroutine
+;		Program Entry
+;
+; TODO: Is there a better location for this section?
 
-main:
+start:
 	; See "Memory Map"
-	lea	rsp, [dstack]
+	lea	rsp, [dstack] ; TODO: Consider deletion (relying on system stack)
 	lea	rbp, [rstack]
 	lea	rsi, [dict]
-	lea	rdi, [space]
+	lea	rdi, [space] ; TODO: Consider mov rdi, rbp
 
 .loop:	call	name
 	call	find
@@ -207,9 +208,9 @@ link '(CALL)'
 	call	caller
 caller: ; call before data
 	pop	rbx
+	mov	byte [rdi], 0xe8
 	lea	rdi, [rdi+5]
 	sub	rbx, rdi
-	mov	byte [rdi-5], 0xe8
 	mov	dword [rdi-4], ebx
 	ret
 
@@ -217,18 +218,17 @@ inliner: ; call before data
 	pop	rbx
 	PUSHA	rcx, rsi ;{
 	movzx	ecx, byte [rbx]
-	lea	rsi, [rbx-5]
-	sub	rsi, rcx
+	lea	rsi, [rbx+1]
 	rep movsb
 	POPA	rcx, rsi ;}
 	ret
 
 macro INLINE mac {
-	local .again, .then
-	jmp	.then
-.again:	mac
-.then:	call	inliner
-	db .then - .again
+	local a, b
+	call	inliner
+	db b - a
+a:	mac
+b:
 }
 
 
@@ -269,23 +269,22 @@ c_:	INLINE C_
 ;
 ; This is the remaining critical infrastructure for the seed language.
 ; These are not inlined because their subroutine calls cannot easily be relocated.
-; (They could have far jumps instead, but what's the point?)
 
 link 'BYE'
 	call	caller
-bye: 	jmp	stop
+bye:	jmp	sys_halt
 
 link 'RX'
 	call	caller
-rx: 	ENTER
+rx:	ENTER
 	DUP
-	call	rx_byte
+	call	sys_rx
 	EXIT
 
 link 'TX'
 	call	caller
-tx: 	ENTER
-	call	tx_byte
+tx:	ENTER
+	call	sys_tx
 	DROP
 	EXIT
 
@@ -319,11 +318,11 @@ name_:	; rdi: compilation area
 	push	rax ;{ prev val
 	push	rdi ;{ len byte
 	inc	rdi
-.skip:	call	rx_byte
+.skip:	call	sys_rx
 	cmp	al, 0x20
 	jbe	.skip
 .store:	stosb
-	call	rx_byte
+	call	sys_rx
 	cmp	al, 0x20
 	ja	.store
 	mov	[rdi], al ; store following space
