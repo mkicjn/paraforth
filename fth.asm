@@ -65,11 +65,14 @@ a:
 b:
 }
 
+wordlist equ 10 ; Only used for compile-time output of wordlist
+
 latest = 0
 macro link str {
 	dq latest
 	latest = $-8
 	counted str
+	wordlist equ wordlist, '  ', str, 10
 }
 
 
@@ -396,6 +399,7 @@ hex_:	ENTER
 
 
 ;			Memory Map
+display 10, 'Words:', 10, wordlist, 10
 
 dict = latest
 
