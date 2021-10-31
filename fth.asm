@@ -13,6 +13,8 @@ entry start
 ; rsi = latest link (see "Dictionary Structure")
 ; rdi = compile area
 
+; TODO: Consider rbx as cached next-on-stack
+
 macro PUSHA [arg] {forward push arg}
 macro POPA [arg] {reverse pop arg}
 
@@ -21,7 +23,7 @@ macro POPA [arg] {reverse pop arg}
 ;
 ; If this tool is ever ported to another OS, hopefully only this section needs rewritten.
 ; To work, the following subroutines should behave the same as on Linux: sys_halt, sys_rx, sys_tx
-; (Both subroutines are only allowed to clobber rax)
+; (These subroutines are only allowed to clobber rax)
 
 sys_halt:
 	mov	edi, eax
@@ -67,10 +69,20 @@ b:
 
 wordlist equ 10 ; Only used for compile-time output of wordlist
 
-latest = 0
+end_link:
+	dw 0
+
+latest = end_link
+
 macro link str {
-	dq latest
-	latest = $-8
+local next
+next:
+	if latest = 0
+		dw 0
+	else
+		dw $ - latest
+	end if
+	latest = next
 	counted str
 	wordlist equ wordlist, '  ', str, 10
 }
@@ -123,22 +135,6 @@ macro SWAP {
 	xchg	rax, rdx
 	; ^ There's a special encoding for xchg rax, r64
 }
-macro NIP {
-	DPOP	rdx
-}
-macro TUCK {
-	DPUSH	rax
-}
-macro OVER {
-	SWAP
-	TUCK
-}
-macro ROT {
-	mov	rbx, rdx
-	mov	rdx, rax
-	DPOP	rax
-	DPUSH	rbx
-}
 
 
 ;		Arithmetic/Logic Operations
@@ -148,7 +144,7 @@ macro ROT {
 
 macro ADD {
 	add	rax, rdx
-	NIP
+	DPOP	rdx
 }
 macro SUB {
 	sub	rdx, rax
@@ -187,10 +183,9 @@ macro C_ {
 
 start:
 	; See "Memory Map"
-	lea	rsp, [dstack] ; TODO: Consider deletion (relying on system stack)
-	lea	rbp, [rstack]
 	lea	rsi, [dict]
-	lea	rdi, [space] ; TODO: Consider mov rdi, rbp
+	lea	rbp, [space]
+	mov	rdi, rbp
 
 .loop:	call	name
 	call	find
@@ -207,6 +202,10 @@ start:
 ; These make use of a technique I refer to as the "call before data" pattern.
 ; This saves some parameter passing by using the return address as an operand.
 
+; TODO idea: Consider switching to a pure subroutine threaded style just for the core, then metacompiling with custom assembler later.
+;            It may not be size or space efficient, but it might be made simpler by removing the need for inlining in the bootstrap phase.
+;            Needs further investigation.
+
 link '(CALL)'
 	call	caller
 caller: ; call before data
@@ -217,11 +216,17 @@ caller: ; call before data
 	mov	dword [rdi-4], ebx
 	ret
 
+; TODO idea: Later on, try implementing `[` to start compiling an anonymous definition, and `]` to end and execute it
+
+; TODO: Is there a good way to integrate inliner into the core?
+
+link '(INLINE)'
+	call	caller
 inliner: ; call before data
 	pop	rbx
 	PUSHA	rcx, rsi ;{
-	movzx	ecx, byte [rbx]
-	lea	rsi, [rbx+1]
+	movzx	ecx, word [rbx]
+	lea	rsi, [rbx+2]
 	rep movsb
 	POPA	rcx, rsi ;}
 	ret
@@ -229,7 +234,7 @@ inliner: ; call before data
 macro INLINE mac {
 	local a, b
 	call	inliner
-	db b - a
+	dw b - a ; TODO: Is there a way to use bytes instead? Has issues with first definition because the link is too far away.
 a:	mac
 b:
 }
@@ -296,21 +301,29 @@ link 'FIND'
 find:	; rax: counted string
 	; rsi: latest link
 	; rax = xt or null
+	; rbx clobbered
+	mov	rbx, rax
 	PUSHA rcx, rdi, rsi ;{
-.loop:	test	rsi, rsi	; null check
-	jz	.done
-	push	rsi		; push link from rsi
-	lea	rsi, [rsi+8]	; get counted str ptr
-	movzx	ecx, byte [rsi]	; load count
-	inc	ecx		; (include length byte)
-	mov	rdi, rax	; load search term
-	repe cmpsb
-	pop	rdi		; early pop; keep rsi and even the stack
-	je	.done
-	mov	rsi, [rdi]	; load next link
+	; test offset
+.loop:	movzx	eax, word [rsi]
+	test	eax, eax
+	jz	.fail
+	; prepare next link
+	mov	rdi, rsi
+	sub	rdi, rax
+	push	rdi ;{
+	; compare strings
+	mov	rdi, rbx
+	lea	rsi, [rsi+2]
+	movzx	ecx, byte [rsi]
+	inc	ecx
+	rep	cmpsb
+	pop	rdi ;}
+	je	.succ
+	mov	rsi, rdi
 	jmp	.loop
-.done:	mov	rax, rsi	; ret address past string
-	POPA rcx, rdi, rsi ;}
+.succ:	mov	rax, rsi
+.fail:	POPA rcx, rdi, rsi ;}
 	ret
 
 link 'NAME,'
@@ -338,9 +351,12 @@ name_:	; rdi: compilation area
 
 link 'DEF'
 	; immediate
-def_:	mov	[rdi], rsi
+def_:	push	rax ;{
+	mov	rax, rdi
+	sub	rax, rsi
 	mov	rsi, rdi
-	lea	rdi, [rdi+8]
+	stosw
+	pop	rax ;}
 	call	name_
 	ret
 
@@ -403,10 +419,6 @@ display 10, 'Words:', 10, wordlist, 10
 
 dict = latest
 
-	rb	1 * 4096
-dstack:
-	rb	1 * 4096
-rstack:
-
-space:
+	rb	1024 * 8
+space: ; Return stack and code space grow in different directions from the same point
 	rb	64 * 4096
