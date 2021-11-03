@@ -1,7 +1,5 @@
 # paraforth
-### A subroutine-threaded Forth focused on simplicity and minimal dependency
-
-(Work in progress; name not yet permanent)
+### A subroutine-threaded Forth focused on simplicity, extreme minimalism, and independence
 
 All documentation and design notes are inside the assembly file as inline comments.
 
