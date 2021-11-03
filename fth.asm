@@ -1,1253 +1,384 @@
 ; Assemble with FASM
 format elf64 executable
+entry start
+
+;		Register Convention
+;
+; rax = cached top-of-stack
+; rbx = scratch
+; rcx = loop counter (preserved!)
+; rdx = cached next-on-stack
+; rbp = return stack
+; rsp = data stack
+; rsi = latest link (see "Dictionary Structure")
+; rdi = compile area
+
+; TODO: Consider rbx as cached next-on-stack
+
+macro PUSHA [arg] {forward push arg}
+macro POPA [arg] {reverse pop arg}
+
 
 ;		System Interface
 ;
-; The start subroutine is the entry point of this executable:
-entry start
-; Its only responsibility is to handle entry to and exit from a host OS.
-start:
-	; Entry from the Linux operating system.
-	;
-	;	Preconditions:
-	; rsp = stack supplied by operating system
-	;
-	;	Postconditions:
-	; sys_exit invoked with main subroutine's eax return value
-	call	setup
-	call	main
-bye:	mov	edi, eax
+; If this tool is ever ported to another OS, hopefully only this section needs rewritten.
+; To work, the following subroutines should behave the same as on Linux: sys_halt, sys_rx, sys_tx
+; (These subroutines are only allowed to clobber rax)
+
+sys_exit:
+	mov	edi, eax
 	mov	eax, 60
 	syscall
-; The `setup` subroutine later handles runtime initialization,
-; and `main` is responsible for the execution of the Forth core.
-;
-; In this implementation, the only host OS supported is Linux, since
-; a Windows version would require changes beyond the simple system I/O.
-; Namely, executable generation would be far more complicated.
-; Furthermore, as a freestanding OS should be produced at some point,
-; supporting more than one surrogate platform would be wasteful.
-;
-;	Input/Output
-;
-; Under Linux, all input and output is done by serial I/O, i.e. through a tty.
-; In particular, stdin and stdout are used for input and output respectively.
-; For other platforms, this paradigm may differ significantly.
-; However, a more-or-less "serial" I/O should still exist in some form.
-; In general, this should result in init, poll, rx, and tx subroutines.
-;
-; The Linux definitions follow:
-;
-macro PUSHA [arg] {forward push arg}
-macro POPA [arg] {reverse pop arg}
-;
-init_io:
-	; (LINUX) Initialize I/O interfaces
-	;
-	;	Preconditions:
-	; (none)
-	;
-	;	Postconditions:
-	; I/O interfaces (stdin, stdout) initialized
-	ret	; Unimplemented
-;
-;	
-;
-stdin_pollfd:
-	dd 0	; fd		= STDIN_FILENO
-	dw 1	; events	= POLLIN
-	dw 0	; revents	(set by kernel)
-poll_rx:
-	; (LINUX) Poll stdin to see if a character is available
-	;
-	;	Preconditions:
-	; (none)
-	;
-	;	Postconditions:
-	; Value of rax is true if stdin ready; false otherwise
-	PUSHA rdx, rdi, rsi, rcx, r11	 ;{
-	mov	eax, 7			; syscall no.
-	lea	rdi, [stdin_pollfd]	; ufds
-	mov	esi, 1			; nfds
-	xor	edx, edx		; timeout_msecs
-	syscall
-	POPA rdx, rdi, rsi, rcx, r11	 ;}
-	ret
-;
-;
-; (Linux needs a buffer for read/write syscalls)
+
 byte_buf:
 	rb 1
-rx_byte:
-	; (LINUX) Receive a character from stdin
-	;
-	;	Preconditions:
-	; (none)
-	;
-	;	Postconditions:
-	; Equivalent to eax = getchar()
-	PUSHA rdx, rdi, rsi, rcx, r11	 ;{
+sys_rx:
+	PUSHA rcx, rdx, rsi, rdi, r11 ;{
 	xor	eax, eax	; syscall no.	(sys_read)
 	xor	edi, edi	; fd		(stdin)
 	mov	edx, 1		; count		(1)
 	lea	rsi, [byte_buf]	; buf		(byte_buf)
 	syscall
 	movzx	eax, byte [byte_buf]
-	POPA rdx, rdi, rsi, rcx, r11	 ;}
+	POPA rcx, rdx, rsi, rdi, r11 ;}
 	ret
-tx_byte:
-	; (LINUX) Transmit a character to stdout
-	;
-	;	Preconditions:
-	; al = character to print
-	;
-	;	Postconditions:
-	; Equivalent to putchar(al)
-	; rax clobbered
-	PUSHA rdx, rdi, rsi, rcx, r11	 ;}
+sys_tx:
+	PUSHA rcx, rdx, rsi, rdi, r11 ;{
 	lea	rsi, [byte_buf]	; buf		(same buffer as before)
 	mov	[rsi], al
 	mov	eax, 1		; syscall no.	(sys_write)
 	mov	edi, 1		; fd		(stdout)
 	mov	edx, 1		; count		(1)
 	syscall
-	POPA rdx, rdi, rsi, rcx, r11	 ;}
+	POPA rcx, rdx, rsi, rdi, r11 ;}
 	ret
-;
-; The remaining I/O subroutines should rely entirely on these primitives.
-;
-
-
-
-;		Forbidden Assembly Techniques
-;
-; Fair warning: Two advanced assembly techniques will be used in this code.
-; These two ideas hinge on manipulation of the return stack,
-; which is disallowed by almost every single high level language.
-; However, these tricks can be quite useful to keep things "simple."
-; Understanding this "black magic" is key to understanding the design.
-;
-;  1. Call before data
-; In this technique, a call instruction is placed before a data region.
-; The data region's address will be left on the return stack, and is then
-; simply popped off the stack and used as a pointer.
-; This is a useful technique for combining code and data, minimizing size.
-;
-;  2. Return stack as a queue
-; This is more like a category of techniques hinging on one observation:
-; The return stack is analogous to a queue (of pending operations).
-; By this analogy, the queue is traversed by the return instruction.
-; Atypical manipulations of this queue have many interesting use cases:
-; * Advanced control flow constructs
-; * Coroutine implementations
-; * Live debugging (stepping word-by-word)
-; * etc.
-;
-; In EXTREMELY rare cases, minor instances of self-modifying code may occur.
-; All occurrences of this will be justified and explained where they appear.
-
 
 
 ;		Dictionary Structure
 ;
-; In this language, all definitions are executed immediately when invoked.
-; The difference lies in how these definitions are constructed.
-; Each definition is, in essence, a string and a pointer.
-; To invoke the definition, simply jmp to the pointer.
-; In principle, this leads to two types of definitions:
-;
-;   * Immediates
-; These are sort of the "default", i.e. the general case.
-; Immediate words point directly to meaningful program code.
-; (I want to run my game, so I type `GAME` and it runs)
-;
-;   * DOES words
-; These are a simple application of the "call before data" technique,
-; operating on the same principle as CREATE ... DOES> in a typical Forth.
-; In many cases, the "data" will simply be more machine code.
-; This is the mechanism for compiling code, resulting in two subcategories:
-;     * Callers (compile a call instruction to following code)
-;     * Inliners (compile the following code inline)
-; Naturally, the call before data technique is extremely flexible.
-; By allowing arbitrary calls before data, more variations can be created:
-;     * Variables (compile push of return address)
-;     * Constants (compile push of literal data)
-;     * etc. (same as CREATE ... DOES>)
-; For information on how this mechanism looks in code, see "Dispatch Method".
-;
-;	TODO: Shouldn't the following paragraph be somewhere else?
-; Bear in mind that this project's core does not have to be a Forth, per se.
-; In principle, the main idea of this project is to create an environment for
-; binary code generation that is both convenient and potentially interactive.
-; For its power and extreme simplicity, Forth is an excellent starting point.
-; In theory, however, the Forth core could be easily replaced by other systems.
-;
-; For simplicity, the dictionary structure was chosen to be an array.
-; The array will grow upwards to minimize executable size (eliminate padding).
-; This forces the dictionary lookup to be a backwards linear search.
-;
-; Each element in the dictionary is structured as follows:
-; Byte:		0        1        N         N+8
-; Contents:	| Length | String | Pointer |
-;
-; A fixed maximum length was chosen as a compromise between several values:
-;  * Simplicity: Good. No pointers and simple linear search (but backwards).
-;  * Speed: Fair. O(n), but more cache friendly than a linked list.
-;     * Does searching latest entries down mean better temporal locality?
-;  * Size: Fair. Padding is undesirable, but no "next" pointers.
-;  * Compatibility: Good. Alignment always passes; no penalties/exceptions.
-; The length bit cuts the string down a byte, but it may be useful later
-; if the user wants compiler introspection (i.e. to get the name of an xt).
-;
-; 32 bytes was chosen as a reasonable size for each definition; thus:
-defn_size equ 32		; Feel free to edit this. Keep divisible by 8!
-; Thus, every 32KiB = 1024 definitions. Not too bad on size, despite padding.
-; To be generous (?) let's allow up to twice as many definitions:
-max_defns equ 2048		; Feel free to edit this.
-; Ideally it would grow as needed, but simplicity is king in this project.
-; With an entry size of 32, this limits distinct names to 23 characters.
-; Then again, if you need names to differ beyond "REALLY_REALLY_LONG_NAME"
-; then I suppose you have a bigger problem than the compiler's limitations.
-; If it's that desparate, then modifying defn_len should work.
-;
-; The dictionary implementation follows:
-;
-macro DICTIONARY { dq 0 }
-macro DICT_DEFINE str*, lbl*
-{
-	macro DICTIONARY
-	\{
-		DICTIONARY
-	display	str, 10
-	local start, end
-		db end-start
-	start:
-		db str
-	end:
-		rb defn_size-8-(end-start+1)
-		dq lbl
-	\}
+; The dictionary is a series of links placed before their corresponding code.
+; Each link is just a pointer to the previous link and a counted string.
+
+; TODO: Experiment with more dictionary types to reduce size
+
+macro counted str {
+local a, b
+	db b - a
+a:
+	db str
+b:
 }
 
-dict_define:
-	; Creates a dictionary entry.
-	;
-	;	Preconditions:
-	; rax = name (ptr to counted string)
-	; rdx = definition (ptr to code)
-	; rsi = top of dictionary
-	;
-	;	Postconditions:
-	; b[rsi..rsi+defn_size-9] = b[rax..rax+b[rax]+1],0...
-	; rax = rax+b[rax]+1
-	; rsi = rsi+defn_size
-	;
-	; TODO: Hyperstatic scope is broken because definitions enact at once.
-	;       Temporary fix in place. Need to find a better way.
-	;
-	push	rcx			;{
-	push	rdi			;{
-	; Shuffle values into appropriate regs
-	mov	rdi, rsi		;{
-	mov	rsi, rax		;{
-	xor	rax, rax
-	; Zero out dictionary space (may be unnecessary)
-	mov	ecx, defn_size/8
-	rep stosq
-	; Copy name into memory
-	push	rdi			;{
-	sub	rdi, defn_size
+wordlist equ 10 ; Only used for compile-time output of wordlist
+
+end_link:
+	dw 0
+
+latest = end_link
+
+macro link str {
+local next
+next:
+	if latest = 0
+		dw 0
+	else
+		dw $ - latest
+	end if
+	latest = next
+	counted str
+	wordlist equ wordlist, '  ', str, 10
+}
+
+
+;		Stack Model
+
+macro DPUSH reg {
+	lea	rbp, [rbp-8]
+	mov	[rbp], reg
+}
+macro DPOP reg {
+	mov	reg, [rbp]
+	lea	rbp, [rbp+8]
+}
+
+;		Stack Operations
+;
+; (Defined in terms of the above, and each other)
+
+link 'DUP'
+postpone_dup_:
+	call	caller
+dup_:
+	DPUSH	rdx
+	mov	rdx, rax
+	ret
+
+link 'DROP'
+	call	caller
+drop_:
+	mov	rax, rdx
+	DPOP	rdx
+	ret
+
+link 'SWAP'
+	call	caller
+swap_:
+	xchg	rax, rdx
+	; ^ There's a special encoding for xchg rax, r64
+	ret
+
+link 'NIP'
+	call	caller
+nip_:
+	DPOP	rdx
+	ret
+
+;		Arithmetic/Logic Operations
+;
+; These appear to be the minimal set necessary to implement an assembler in Forth.
+; This was determined over the course of writing proto_asm.fth, which runs in Gforth.
+
+link '+'
+	call	caller
+add_:
+	add	rax, rdx
+	DPOP	rdx
+	ret
+link '-'
+	call	caller
+sub_:
+	sub	rdx, rax
+	jmp	drop_
+
+link 'LSHIFT'
+	call	caller
+lshift:
+	mov	rbx, rcx
+	mov	ecx, eax
+	shl	rdx, cl
+	mov	rcx, rbx
+	jmp	drop_
+
+link 'RSHIFT'
+	call	caller
+rshift:
+	mov	rbx, rcx
+	mov	ecx, eax
+	shr	rdx, cl
+	mov	rcx, rbx
+	jmp	drop_
+
+
+;		Memory Operations
+;
+; It turns out that `C,` is the only necessary memory operation to write an assembler.
+
+
+link 'C,'
+	call	caller
+c_:
+	stosb
+	jmp	drop_
+
+
+;		Program Entry
+;
+; TODO: Is there a better location for this section?
+
+start:
+	; See "Memory Map"
+	lea	rsi, [dict]
+	lea	rbp, [space]
+	mov	rdi, rbp
+
+; TODO: Investigate printing '[ ' as a prompt.
+; TODO bugfix: [ $ 5 ] [ $ 6 ] [ + ] does not yield the same results as  [ $ 5 $ 6 + ]. Why?
+
+.loop:	call	open
+	jmp	.loop
+; ^ No error checking for now.
+; When the compiler gets redefined later, it will be more featureful.
+
+
+;		Compilation Utilities
+;
+; This makes use of a technique I refer to as the "call before data" pattern.
+; This saves some parameter passing by using the return address as an operand.
+
+link 'DOCOL'
+	call	caller
+caller: ; call before data
+	pop	rbx
+	mov	byte [rdi], 0xe8
+	lea	rdi, [rdi+5]
+	sub	rbx, rdi
+	mov	dword [rdi-4], ebx
+	ret
+
+link 'DOLIT'
+dolit:	call	postpone_dup_
+	mov	word [rdi], 0xb848
+	lea	rdi, [rdi+2]
+	ret
+
+; TODO: Can the words `[` and `]` be defined in the language itself?
+
+link '['
+open:	push	rdi
+.loop:	call	name
+	call	find
+	mov	rbx, rax
+	call	drop_
+	call	rbx
+	jmp	.loop
+
+link ']'
+close:	
+	call	exit_
+	pop	rbx
+	pop	rdi
+	jmp	rdi
+
+; TODO: `[` and `]` are like words for interpreting. As a companion to these, I want words for inlining, i.e. `{` and `}`
+
+
+;		Built-Ins
+;
+; This is the remaining critical infrastructure for the seed language.
+; These are not inlined because their subroutine calls cannot easily be relocated.
+
+link 'BYE'
+	call	caller
+bye:	jmp	sys_exit
+
+link 'RX'
+	call	caller
+rx:	call	dup_
+	jmp	sys_rx
+
+link 'TX'
+	call	caller
+tx:	call	sys_tx
+	jmp	drop_
+
+link 'FIND'
+	call	caller
+find:	; rax: counted string
+	; rsi: latest link
+	; rax = xt or null
+	; rbx clobbered
+	mov	rbx, rax
+	PUSHA rcx, rdi, rsi ;{
+	; test offset
+.loop:	movzx	eax, word [rsi]
+	test	eax, eax
+	jz	.fail
+	; prepare next link
+	mov	rdi, rsi
+	sub	rdi, rax
+	push	rdi ;{
+	; compare strings
+	mov	rdi, rbx
+	lea	rsi, [rsi+2]
 	movzx	ecx, byte [rsi]
 	inc	ecx
-	rep movsb
-	; Copy definition into memory
-	pop	rdi			;}
-	mov	[rdi-8], rdx
-	; Restore register values and return
-	mov	rax, rsi		;}
-	mov	rsi, rdi		;}
-	pop	rdi			;}
-	pop	rcx			;}
-	ret
-
-fth_find_imm:  ; Alternate label, makes later code more readable
-dict_search:
-	; Searches for a dictionary entry.
-	;
-	;	Preconditions:
-	; rax = name (ptr to counted string)
-	; rsi = top of dictionary
-	;
-	;	Postconditions:
-	; rax = definition (ptr to code) or 0 if undefined
-	; rbx clobbered
-	push	rdi 			;{
-	push	rsi			;{
-	push	rcx			;{
-	; Copy search string ptr into rdi and its length to rbx
-	movzx	ebx, byte [rax]
-	inc	ebx
-	mov	rdi, rax
-	; Copy next definition and test for end of dictionary
-.loop:	mov	rax, [rsi-8]
-	cmp	rax, 0
-	jz	.exit
-	; Compare names and return if equal
-	sub	rsi, defn_size
-	mov	ecx, ebx
-	repe cmpsb
-	je	.exit
-	; Else reset string positions and loop
-	sub	rcx, rbx
-	add	rsi, rcx
-	add	rdi, rcx
+	rep	cmpsb
+	pop	rdi ;}
+	je	.succ
+	mov	rsi, rdi
 	jmp	.loop
-	; (exit)
-.exit:	pop	rcx			;}
-	pop	rsi			;}
-	pop	rdi			;}
+.succ:	mov	rax, rsi
+.fail:	POPA rcx, rdi, rsi ;}
 	ret
 
-
-
-;		Notes on Code Generation
-;
-;	Register Convention
-;
-; Since this software is designed for generating code in general,
-; these notes and guidelines are for the included Forth implementation.
-;
-; The following register convention is used across words in the Forth core:
-;	rax: cached top-of-stack
-;	rbx: volatile scratch register
-;	rdx: cached next-on-stack
-;	rcx: non-volatile scratch register (loop counter)
-;	rdi: code destination
-;	rsi: top of dictionary
-;	rsp: data stack (push / pop)
-;	rbp: return stack (sub+mov / mov+add)
-; The volatility of other registers is undefined.
-;
-; This information leads to the setup subroutine:
-;
-setup:
-	; Setup subroutine
-	;
-	;	Preconditions:
-	; (none)
-	;
-	;	Postconditions:
-	; Registers set according to convention above
-	; rax = 0
-	pop	rax			;{ (1)
-	lea	rsp, [dstack_start]
-	push	rax			;} (1)
-	lea	rbp, [rstack_start]
-	lea	rdi, [code_start]
-	lea	rsi, [dict_start]
-	xor	eax, eax
+link 'NAME,'
+	call	caller
+name_:	; rdi: compilation area
+	; rdi += length of counted name string
+	; rbx clobbered
+	push	rax ;{ prev val
+	push	rdi ;{ len byte
+	inc	rdi
+.skip:	call	sys_rx
+	cmp	al, 0x20
+	jbe	.skip
+.store:	stosb
+	call	sys_rx
+	cmp	al, 0x20
+	ja	.store
+	mov	[rdi], al ; store following space
+	pop	rax ;} len byte
+	mov	rbx, rdi
+	dec	rbx
+	sub	rbx, rax
+	mov	[rax], bl
+	pop	rax ;} prev val
 	ret
-	;	Notes:
-	; (1) Allows for one return after change to rsp.
-	;     Thus, this subroutine shouldn't be called outside program entry.
-;
-; The rdi, rsi, and rcx registers can be used for string instructions,
-; but their previous values must be preserved across subroutine calls.
-; Compilation subroutines will necessarily modify rdi and rsi.
-;
-;	Stack Convention
-;
-; Forth requires at least two stacks, but x86 only supports one.
-; Also, we want to use push/pop instructions for data stack.
-; Solution: Manually place return addresses on a second stack.
-;
-; ENTER and EXIT are a subroutine prologue/epilogue pair responsible for this.
-; Note that not every subroutine needs to use ENTER and EXIT.
-; Rule of thumb:
-; * If you need to modify the data stack, use ENTER first.
-; * If you use ENTER, then you should use EXIT to return.
-macro ENTER {
-	; Push return address to stack at rbp
-	lea	rbp, [rbp-8]
-	pop	qword [rbp]
-}
-macro EXIT {
-	; Pop return address from stack at rbp
-	push	qword [rbp]
-	lea	rbp, [rbp+8]
+
+link 'DEF'
+	; immediate
+def_:	push	rax ;{
+	mov	rax, rdi
+	sub	rax, rsi
+	mov	rsi, rdi
+	stosw
+	pop	rax ;}
+	jmp	name_
+
+link 'EXIT'
+	; immediate
+exit_:	mov	byte [rdi], 0xc3
+	inc	rdi
 	ret
-}
-;
-; Macros for common stack operations are defined here to aid in programming:
-;
-macro DUP {
-	push	rdx
-	mov	rdx, rax
-}
-macro DROP {
-	mov	rax, rdx
-	pop	rdx
-}
-macro SWAP {
-	; On my machine, `xchg r, r` is as fast as 3 movs
-	xchg	rax, rdx
-}
-macro OVER {
-	push	rdx
-	xchg	rax, rdx
-}
-macro NIP {
-	pop	rdx
-}
-macro TUCK {
-	push	rax
-}
-macro DDUP {
-	push	rdx
-	push	rax
-}
-macro DDROP {
-	pop	rax
-	pop	rdx
-}
-;
-;	Return Stack Manipulation
-;
-; Ideally, the return stack will only be manipulated sparingly.
-; So, it isn't worth swapping the stack registers and using push/pop.
-; (This is part of the reason for ENTER and EXIT, defined above.)
-; This also simplifies the compiler; there's no question which stack is in rsp.
-; The alternative is, of course, sub+mov and mov+add (see Register Convention).
-; But, I want to avoid using the ALU, since it might be "busy".
-; So, I use the lea instruction to avoid add and sub in these cases.
-; (This is not really an issue with modern CPUs, but it costs the same anyway.)
-;
-macro TO_R {
-	lea	rbp, [rbp-8]
-	mov	[rbp], rax
-	DROP
-}
-macro R_FETCH {
-	DUP
-	mov	rax, [rbp]
-}
-macro R_DROP {
-	lea	rbp, [rbp+8]
-}
-macro R_FROM {
-	R_FETCH
-	R_DROP
-}
-macro TO_TO_R {
-	lea	rbp, [rbp-16]
-	mov	[rbp], rax
-	mov	[rbp+8], rdx
-	DDROP
-}
-macro R_FROM_FROM {
-	DDUP
-	mov	rax, [rbp]
-	mov	rdx, [rbp+8]
-	lea	rbp, [rbp+16]
-}
-;
-;	Word Dispatch
-;
-; As described in the dictionary notes, definitions are a string and pointer.
-; That pointer gets jmp'd to when the name is invoked.
-; These definitions can compile machine code, which gets executed directly.
-;
-; This mechanism is simple, and may seem limited compared to traditional Forth.
-; In a traditional Forth, definitions have an "immediate" flag, and usually
-; a couple other flags (such as "compile-only", etc.)
-; Furthermore, a STATE variable decides whether to interpret/compile input.
-;
-; This Forth is purposefully designed to have none of those.
-; But, with a certain assembly trick ("call before data"), there is still
-; flexibility to handle complicated situations, such as compiler extensions.
-; For more information on these tricks, see "Forbidden Assembly Techniques".
-;
-; In short, here's how it looks:
-;
-; Traditional Forth:
-;    : WORD  ... ;
-;    : WORD-IMM  ... ; IMMEDIATE
-;    : WORDX2  ['] WORD1 COMPILE, ['] WORD2 COMPILE, ; IMMEDIATE
-;    : WORD-INLINE  ( how? ) ;
-; Nuances are handled internally by the interpreter, increasing complexity.
-;
-; This implementation: (subject to change)
-;    : WORD  (CALL) ... ;
-;    : WORD-IMM  ... ;
-;    : WORDX2  (INLINE) WORD1 WORD2 ;
-;    : WORD-INLINE  (INLINE) ... ;
-; All words have consistent calling semantics to the interpreter.
-; Simpler interpreter, shorter definitions, and WAY more control.
-;
-; Meanwhile, the words `(CALL)` and `(INLINE)` can be defined simply:
-; : (CALL)  R> CALL ;	: (INLINE)  R> INLINE ;
-; ...applying the "call before data" technique from before.
-; The words `CALL` and `INLINE` are provided by the implementation at first,
-; but can be defined in Forth later for bootstrapping purposes.
-;
-; TODO: Move this set of notes to somewhere more relevant
 
+link 'NAME'
+	call	caller
+name:	call	dup_
+	mov	rax, rdi
+	call	name_
+	mov	rdi, rax
+	ret
 
-;		Numeric Literals
-;
-; Number conversion subroutines operate on counted strings.
-; This is because user input is read as a series of counted strings,
-; which is in turn because counted strings are used in the dictionary.
-;
-; To simplify the interpreter and environment, numeric literals do not exist
-; at the language level, and are instead implemented by parsing words.
-;
-; In a traditional Forth, `10` puts 10 on the stack or compiles DOLIT 10
-; (depending on whether STATE indicates interpretation or compilation).
-; Here, `# 10` always compiles a push 10 instruction.
-; The interpreter can then be far simpler than a traditional Forth, because
-; the work is offloaded from the interpreter to the definition of `#`.
-;
-; TODO: What should happen if the input is invalid? i.e. `# 1A2B3C`
-;
-cstr_to_r:
-	; Convert a counted string to a register-sized integer
-	; Conversion occurs in base 10.
-	;
-	;	Preconditions
-	; rax = pointer to counted string
-	;
-	;	Postconditions
-	; rax = true if the conversion was successful, false otherwise
-	; rdx = integer value of string
-	; rcx clobbered
-	;
-	;	Notes
-	; (1) The reason I keep doing `movzx eax, al` repeatedly is because
-	;     I use rax for some arithmetic on each iteration.
-	;     If I tried to do `xor eax, eax` at the start to avoid it,
-	;     the high bits wouldn't stay cleared; the result would be wrong.
-	push	rsi			;{
+link 'DIGIT'
+	call	caller
+digit:	; al: digit ASCII character [0-9A-Za-z]
+	; rax = digit value (bases 2-36)
+	cmp	al, 0x39 ; '9'
+	ja	.gt9
+	sub	al, 0x30 ; '0'
+	jmp	.ret
+.gt9:	dec	al
+	and	al, 0xdf ; ~0x20; toupper
+	sub	al, 0x36 ; 'A'-10-1
+.ret:	movzx	eax, al
+	ret ; invalid characters return >35
+
+link '$'
+	; immediate
+hex:	call	dup_
+	call	name
+	PUSHA rcx, rdx, rsi ;{
 	mov	rsi, rax
-	; Load string length
 	lodsb
 	movzx	ecx, al
 	xor	edx, edx
 .loop:	lodsb
-	; Convert char to integer
-	cmp	al, 0x30 ; '0'
-	jl	.done
-	cmp	al, 0x39 ; '9'
-	jg	.done
-	movzx	eax, al			; (1)
-	sub	eax, 0x30 ; '0'
-	; rdx = rdx * 10 + rax
-	sal	rdx, 1
-	add	rax, rdx
-	sal	rdx, 2
-	add	rdx, rax
+	call	digit
+	sal	rdx, 4
+	or	dl, al
 	loop	.loop
-.done:	xor	eax, eax
-	test	cl, cl
-	setz	al
-	pop	rsi			;}
-	ret
-
-
-;		Callers
-;
-; This is the core compilation mechanism.
-; The call-before-data technique is used HEAVILY here.
-; 
-create_caller:
-	; Compile a call to `caller` at rdi.
-	;
-	;	Preconditions
-	; (none)
-	;
-	;	Postconditions
-	; rdi = rdi + 5
-	; Memory between old and new values of rdi modified.
-	call	caller		; (Beautiful!)
-	; NB: Call-before-data applied
-caller:
-	; Compiles at rdi a call to a subroutine.
-	; Best used with the call-before-data technique.
-	;
-	;	Preconditions
-	; Address on stack (to subroutine to call)
-	;
-	;	Postconditions
-	; Address on stack consumed
-	; rdi = rdi + 5
-	; Memory between old and new values of rdi modified
-	; rbx clobbered
-	pop	rbx
-call_rbx:
-	mov	byte [rdi], 0xE8
-	inc	rdi
-	; NB: Intentional fallthrough
-put_offset:
-	; Compiles a 4-byte offset at rdi
-	;
-	;	Preconditions
-	; Pointer in rbx
-	;
-	;	Postconditions
-	; rdi = rdi + 4
-	; rbx = rbx - rdi
-	; dword [rdi-4] = ebx
-	add	rdi, 4
-	sub	rbx, rdi
-	mov	dword [rdi-4], ebx
-	ret
-;
-; Note the interesting result above: create_caller calls caller on itself!
-;
-
-
-
-;		Inliners
-;
-; This is the foundation of the primitives of this Forth implementation,
-; which should be inlined into the code as an optimization.
-;
-; The same call-before-data technique is used here.
-; The first four bytes after the call represent the length of the subroutine.
-;
-inliner:
-	; Inlines a subroutine at rdi
-	; Best used with call-before-data technique
-	;
-	;	Preconditions
-	; Address on stack (to doubleword length followed by code)
-	; 
-	;	Postconditions
-	; Address on stack consumed
-	; rdi = rdi + dword [[rsp]]
-	; Memory between old and new values of rdi modified
-	; rbx clobbered
-	pop	rbx
-	push	rsi			;{
-	mov	rsi, rbx
-	push	rax			;{
-	lodsd
-	push	rcx			;{
-	mov	ecx, eax
-	rep	movsb
-	pop	rcx			;}
-	pop	rax			;}
-	pop	rsi			;}
-	ret
-; 
-; This macro creates a subroutine for inlining the body of a 0-argument macro.
-; Basically, a pre-compiled macro for runtime compilation of code.
-;
-macro INLINE mac {
-	call	inliner
-	local .start
-	local .end
-	dd .end - .start
-.start:
-	mac
-.end:
-}
-;
-; Now we can create inliners for all the stack operations from earlier.
-; The macro definitions for these are in the section marked "Stack Convention".
-;
-macro DICT_DEFINE_MACRO mac, str, label {
-	label:
-		INLINE mac
-	DICT_DEFINE str, label
-}
-;
-DICT_DEFINE_MACRO DUP, 'DUP', inline_dup
-DICT_DEFINE_MACRO DROP, 'DROP', inline_drop
-DICT_DEFINE_MACRO SWAP, 'SWAP', inline_swap
-DICT_DEFINE_MACRO OVER, 'OVER', inline_over
-DICT_DEFINE_MACRO NIP, 'NIP', inline_nip
-DICT_DEFINE_MACRO TUCK, 'TUCK', inline_tuck
-DICT_DEFINE_MACRO DDUP, 'DDUP', inline_ddup
-DICT_DEFINE_MACRO DDROP, 'DDROP', inline_ddrop
-;
-; We can do the same for return stack manipulation words:
-;
-DICT_DEFINE_MACRO TO_R, '>R', inline_to_r
-DICT_DEFINE_MACRO R_FETCH, 'R@', inline_r_fetch
-DICT_DEFINE_MACRO R_DROP, 'RDROP', inline_r_drop
-DICT_DEFINE_MACRO R_FROM, 'R>', inline_r_from
-DICT_DEFINE_MACRO TO_TO_R, '>>R', inline_to_to_r
-DICT_DEFINE_MACRO R_FROM_FROM, 'R>>', inline_r_from_from
-;
-
-
-
-;		Forth Core
-;
-; NB. Execution begins with the `main` subroutine defined in this section.
-;
-; Subroutines using the Forth calling convention are named with a fth_ prefix
-;
-; There are, in general, three types of words. Here's how to define them:
-; * Callers (regular words)
-;   * Start the subroutine with `call caller`.
-;   * Write the rest of the subroutine as normal.
-; * Inliners (copy into code)
-;   * Write a macro containing the code.
-;   * Do not use ENTER or EXIT, since it will already exist in the code.
-;   * Create a subroutine using the INLINER macro.
-; * Immediates (execute instead of compile)
-;   * Do none of the above.
-; After these steps, use DICT_DEFINE to expose it to the compiler.
-;
-
-fth_bye:
-	call	caller
-	jmp	bye
-DICT_DEFINE 'BYE', fth_bye
-
-fth_tx:
-	call	caller
-	ENTER
-	call	tx_byte
-	DROP
-	EXIT
-DICT_DEFINE 'TX', fth_tx
-
-fth_rx:
-	call	caller
-	ENTER
-	DUP
-	call	rx_byte
-	EXIT
-DICT_DEFINE 'RX', fth_rx
-
-
-;		Parser
-;
-; In my opinion, Forth has the simplest grammar of any high-level language.
-; In fact, I like to say it has one rule: "Words are delimited by whitespace."
-; That's one of the main reasons I chose this language as the core.
-;
-; Naturally, this grammar is implemented by a single parsing word.
-; In this implementation, WORD functions like PARSE-NAME from a typical Forth.
-; My logic for this is that the WORD word should fetch a word from input.
-;
-; It returns a counted string because it is useless for names to be >255 bytes,
-; and because the FIND expects a counted string for simplicity.
-; In other words, "what else would you use WORD for?"
-;
-fth_word:
-	call	caller
-fth_word_imm: ; ( "<spaces>name<space>" -- c-addr )
-	ENTER
-	DUP
-	inc	rdi		;{
-.skip:	call	rx_byte
-	cmp	eax, 0x20 ; 0x20 = ' '
-	jle	.skip
-	push	rdi		;{
-.loop:	stosb
-	call	rx_byte
-	cmp	eax, 0x20 ; 0x20 = ' '
-	jg	.loop
-.done:	mov	rax, rdi
-	pop	rdi		;}
-	sub	rax, rdi
-	dec	rdi		;}
-	mov	[rdi], al
-	mov	rax, rdi
-	EXIT
-DICT_DEFINE 'WORD', fth_word
-;
-; Notice that this code stores input at rdi without changing it.
-; This presents some challenges and some benefits.
-; Challenges:
-; * We can't keep more than one word at a time, or
-; * retain a word after compiling code.
-; Benefits:
-; * It's simpler to store constant strings inline in the code, because
-;   we can skip it with AHEAD .. THEN and avoid having to relocate it.
-;
-; Another parsing word which is useful but not necessary is PARSE.
-; Unlike WORD, PARSE is more general and works exactly like the standard.
-; (Well, except that it also places the word at the compilation pointer.)
-;
-fth_parse: ; ( delim "ccc<delim>" -- c-addr u )
-	call	caller
-fth_parse_imm:
-	ENTER
-	DDUP
-	mov	edx, eax
-	push	rdi		;{
-.loop:	call	rx_byte
-	cmp	al, dl
-	je	.done
-	stosb
-	jmp	.loop
-.done:	mov	rax, rdi
-	pop	rdi		;{
-	sub	rax, rdi
-	mov	rdx, rdi
-	EXIT
-DICT_DEFINE 'PARSE', fth_parse
-
-
-;
-; 		Forth Core, continued
-;
-; TODO: Categorize remaining definitions into sections.
-;
-
-fth_find: ; ( c-addr -- xt|0 )
-	call	caller
-	jmp	fth_find_imm ; Alternate label for dict_search
-DICT_DEFINE 'FIND', fth_find
-
-fth_define: ; ( xt c-addr -- )
-	call	caller
-fth_define_imm:
-	ENTER
-	call	dict_define
-	DDROP
-	EXIT
-DICT_DEFINE 'DEFINE', fth_define
-
-fth_execute: ; ( i*x xt -- j*x )
-	call	caller
-fth_execute_imm:
-	; ENTER and EXIT not used despite altering the stack.
-	; They are worked around instead for optimization purposes.
-	mov	rbx, rax
 	mov	rax, rdx
-	mov	rdx, [rsp+8]
-	pop	qword [rsp] ; equivalent to 2>R NIP 2R>
-	jmp	rbx ; NB: Tail call to xt
-DICT_DEFINE 'EXECUTE', fth_execute
-
-fth_immediate: ; -12 ALLOT ENTER
-	sub	rdi, 12 ; Undo compilation of `call caller` and `ENTER`
-	call	fth_enter ; Recompile enter to allow stack manipulations
-	; TODO: Maybe this should just add 5 to the recent definition's XT
-	ret
-DICT_DEFINE 'IMMEDIATE', fth_immediate
-
-fth_literal: ; ( n -- )
-	call	caller
-fth_literal_imm:
-	ENTER
-	call	inline_dup
-	mov	byte [rdi], 0xb8 ; mov eax
-	inc	rdi
-	stosd ; imm32
-	DROP
-	EXIT
-DICT_DEFINE 'LITERAL', fth_literal
-
-fth_compile: ; ( xt -- )
-	call	caller
-fth_compile_imm:
-	ENTER
-	mov	rbx, rax
-	DROP
-	call	call_rbx
-	EXIT
-DICT_DEFINE 'COMPILE', fth_compile
-
-
-fth_decimal: ; ( "[0-9]+" -- n )
-	; IMMEDIATE
-	ENTER
-	call	fth_word_imm
-	push 	rdx
-	call	cstr_to_r
-	DROP ; ignore error
-	call	fth_literal_imm
-	EXIT
-DICT_DEFINE '#', fth_decimal
-
-
-;	Arithmetic/Logic Words
-;
-; TODO: Consider adding or removing built-in operations.
-; (How minimal do I want? Closer to eForth or more practical?)
-;
-; So far, I've tried to only keep operations that would be too slow otherwise,
-; whether it's difficult without a primitive, or just low-hanging fruit.
-;
-; TODO: What's the best way to expose the carry bit to the language?
-;
-
-macro _ADD {
-; I have felt conflicted in the past on how exactly to implement this.
-; This way saves a mov instruction:
-	add	rax, rdx
-	NIP
-; But this way behaves more like standard implementations:
-;	add	rdx, rax
-;	DROP
-; The former method causes `NEGATE +` to behave as `SWAP -`.
-; Whereas, the latter method causes it to behave as a substitute for `-`.
-; This property is slightly nice, to avoid the need for a built in - word.
-; But, including it would be consistent with * and /MOD; no need to avoid it.
-;
-; After careful deliberation, I've decided to stick with the former.
-; With mov being "free" due to renaming, this is a negligible size optimization.
-; Plus, uses of `SWAP -` can do `NEGATE +` instead to avoid an xchg.
-}
-macro _SUB {
-	sub	rdx, rax
-	DROP
-}
-macro _INC {
-	inc	rax
-}
-macro _DEC {
-	dec	rax
-}
-macro _NEG {
-	neg	rax
-}
-macro _NOT {
-	not	rax
-}
-macro _AND {
-	and	rax, rdx
-	NIP
-}
-macro _OR {
-	or	rax, rdx
-	NIP
-}
-macro _XOR {
-	xor	rax, rdx
-	NIP
-}
-macro _ZLT {
-	sar	rax, 63
-}
-macro _ZEQ {
-	; TODO: Is this worth including? Or, is there a shorter definition?
-	test	rax, rax
-	setnz	al
-	dec	al
-	movsx	rax, al
-}
-macro _2MUL {
-	sal	rax, 1
-}
-macro _2DIV {
-	sar	rax, 1
-}
-macro _SHL {
-	mov	cl, al
-	shl	rdx, cl
-	DROP
-}
-macro _SHR {
-	mov	cl, al
-	shr	rdx, cl
-	DROP
-}
-macro _MUL {
-	mul	rdx
-	NIP
-}
-macro _DIVMOD {
-	mov	rbx, rax
-	mov	rax, rdx
-	xor	edx, edx
-	div	rbx
-}
-
-DICT_DEFINE_MACRO _ADD, '+', fth_add
-DICT_DEFINE_MACRO _SUB, '-', fth_sub
-DICT_DEFINE_MACRO _INC, '1+', fth_inc
-DICT_DEFINE_MACRO _DEC, '1-', fth_dec
-DICT_DEFINE_MACRO _NEG, 'NEGATE', fth_neg
-DICT_DEFINE_MACRO _NOT, 'NOT', fth_not
-DICT_DEFINE_MACRO _AND, 'AND', fth_and
-DICT_DEFINE_MACRO _OR, 'OR', fth_or
-DICT_DEFINE_MACRO _XOR, 'XOR', fth_xor
-DICT_DEFINE_MACRO _ZLT, '0<', fth_zlt
-DICT_DEFINE_MACRO _ZEQ, '0=', fth_zeq
-DICT_DEFINE_MACRO _2MUL, '2*', fth_2mul
-DICT_DEFINE_MACRO _2DIV, '2/', fth_2div
-DICT_DEFINE_MACRO _SHL, 'LSHIFT', fth_shl
-DICT_DEFINE_MACRO _SHR, 'RSHIFT', fth_shr
-DICT_DEFINE_MACRO _MUL, '*', fth_mul
-DICT_DEFINE_MACRO _DIVMOD, '/MOD', fth_divmod
-
-
-;	Memory Words
-;
-
-macro FETCH {
-	mov	rax, [rax]
-}
-macro STORE {
-	mov	[rax], rdx
-	DDROP
-}
-macro CFETCH {
-	movzx	eax, byte [rax]
-}
-macro CSTORE {
-	mov	[rax], dl
-	DDROP
-}
-macro COMMA {
+	POPA rcx, rdx, rsi ;}
+	call	dolit
 	stosq
-	DROP
-}
-macro CCOMMA {
-	stosb
-	DROP
-}
-macro HERE {
-	DUP
-	mov	rax, rdi
-}
-macro ALLOT {
-	add	rdi, rax
-	DROP
-}
-
-DICT_DEFINE_MACRO STORE, '!', fth_store
-DICT_DEFINE_MACRO FETCH, '@', fth_fetch
-DICT_DEFINE_MACRO CSTORE, 'C!', fth_cstore
-DICT_DEFINE_MACRO CFETCH, 'C@', fth_cfetch
-DICT_DEFINE_MACRO COMMA, ',', fth_comma
-DICT_DEFINE_MACRO CCOMMA, 'C,', fth_ccomma
-DICT_DEFINE_MACRO HERE, 'HERE', fth_here
-DICT_DEFINE_MACRO ALLOT, 'ALLOT', fth_allot
+	ret
 
 
-;	Control Flow / Branching Words
-;
-; Jumps from one section of compiled code to another should be relative.
-; This relocatability aids in turnkey application generation.
-;
+;			Memory Map
+display 10, 'Words:', 10, wordlist, 10
 
-fth_begin: ; ( -- c-addr )
-	ENTER
-	; MARK<
-	HERE
-	EXIT
-DICT_DEFINE 'BEGIN', fth_begin
+dict = latest
 
-fth_again: ; ( c-addr -- )
-	ENTER
-	; RESOLVE<
-	mov	byte [rdi], 0xe9 ; jmp (rel32)
-	add	rdi, 5
-	sub	rax, rdi
-	mov	dword [rdi-4], eax ; rel32
-	DROP
-	EXIT
-DICT_DEFINE 'AGAIN', fth_again
-
-fth_ahead: ; ( -- c-addr )
-	ENTER
-	; MARK>
-	mov	byte [rdi], 0xe9 ; jmp (rel32)
-	add	rdi, 5
-	DUP
-	mov	rax, rdi
-	EXIT
-DICT_DEFINE 'AHEAD', fth_ahead
-
-fth_then: ; ( c-addr -- )
-	; RESOLVE>
-	ENTER
-	mov	rbx, rdi
-	sub	rbx, rax
-	mov	dword [rax-4], ebx ; rel32
-	DROP
-	EXIT
-DICT_DEFINE 'THEN', fth_then
-
-fth_if: ; ( -- c-addr)
-	ENTER
-	; ?MARK>
-	mov	dword [rdi], 0xc08548 ; test rax, rax
-	add	rdi, 3
-	call	inline_drop ; DROP
-	; ( similar to AHEAD, but conditional )
-	mov	word [rdi], 0x840f ; jz (rel32)
-	add	rdi, 6
-	DUP
-	mov	rax, rdi
-	EXIT
-DICT_DEFINE 'IF', fth_if
-
-fth_until: ; ( -- c-addr )
-	ENTER
-	; ?RESOLVE<
-	mov	dword [rdi], 0xc08548 ; test rax, rax
-	add	rdi, 3
-	call	inline_drop
-	; ( similar to AGAIN, but conditional )
-	mov	word [rdi], 0x840f ; jz (rel32)
-	add	rdi, 6
-	sub	rax, rdi
-	mov	dword [rdi-4], eax ; rel32
-	DROP
-	EXIT
-DICT_DEFINE 'UNTIL', fth_until
-
-fth_recurse: ; ( -- c-addr )
-	ENTER
-	DUP
-	mov	rax, [rsi-8+defn_size] ; See comment in compiler subroutine
-	call	fth_compile_imm
-	EXIT
-DICT_DEFINE 'RECURSE', fth_recurse
-
-
-DICT_DEFINE_MACRO int3, 'int3', fth_int3
-; ^ Not actually a macro, but works because of FASM syntax
-
-fth_int3_imm:
-	int3
-DICT_DEFINE 'int3!', fth_int3_imm
-
-
-DICT_DEFINE_MACRO ENTER, 'ENTER', fth_enter
-
-DICT_DEFINE_MACRO EXIT, 'EXIT', fth_exit
-
-
-fth_count: ; ( c-addr -- c-addr u )
-	call	caller
-fth_count_imm:
-	ENTER
-	DUP
-	movzx	eax, byte [rax]
-	inc	rdx
-	EXIT
-DICT_DEFINE 'COUNT', fth_count
-
-fth_type: ; ( c-addr u -- )
-	call	caller
-fth_type_imm:
-	ENTER
-	push	rsi ; {
-	mov	rcx, rax
-	mov	rsi, rdx
-.loop:	lodsb
-	call	tx_byte
-	loop	.loop
-	pop	rsi ; }
-	DDROP
-	EXIT
-DICT_DEFINE 'TYPE', fth_type
-
-
-; TODO: Do all of these need to be built in? It has been convenient like this,
-;       but is there an elegant way to define them from the language itself?
-;       Looks like `reader` is the only fundamental one. Investigate further.
-fth_semicolon:
-	lea	rsp, [rsp+8] ; drop return address (to reader)
-	EXIT
-DICT_DEFINE ';', fth_semicolon
-
-fth_colon:
-	ENTER
-	HERE
-	call	fth_word_imm
-	call	fth_define_imm
-	call 	compiler
-	EXIT
-DICT_DEFINE ':', fth_colon
-
-main:
-	; Call the interpreter over and over forever
-	call	interpreter
-	jmp	main
-
-interpreter:
-	; Compile code, then run it when the user types `;` and loop
-	;
-	; HERE >R
-	ENTER
-	lea	rbp, [rbp-8]
-	mov	[rbp], rdi
-	; ENTER INTERP EXIT
-	call	fth_enter
-	call	reader ; returns when user types `;`
-	call	fth_exit
-	; R> DSP!
-	mov	rdi, [rbp]
-	lea	rbp, [rbp+8]
-	; HERE EXECUTE
-	call	rdi
-	EXIT
-
-compiler:
-	; Replace interpreter context with compiler and return on `;`
-	;
-	ENTER
-	lea	rbp, [rbp+32] ; Drop return addresses from interpreter context
-	call	create_caller
-	call	fth_enter
-	sub	rsi, defn_size ; { (Response to TODO in dict_define)
-	call	reader
-	add	rsi, defn_size ; }
-	call	fth_exit
-	EXIT
-
-reader:
-	; Execute words from input in an "infinite" loop
-	; (Returns when an immediate word like `;` drops its return address)
-	ENTER
-.loop:
-	call	fth_word_imm
-	DUP
-	call	fth_find_imm
-	test	rax, rax
-	jz	.fail
-	NIP
-	call	fth_execute_imm
-	jmp	.loop
-.fail:
-	DROP
-	call	fth_count_imm
-	call	fth_type_imm
-	mov	eax, 0x3F ; '?'
-	call	tx_byte
-	mov	eax, 0x20 ; ' '
-	call	tx_byte
-.skip:	call	rx_byte ; Skip input until newline
-	cmp	al, 0x0A ; '\n'
-	jne	.skip
-	jmp	.loop
-
-
-;		Memory Map
-;
-; For simplicity, regions are all fixed sizes adjustable via constants:
-code_size equ 64*1024		; Feel free to edit this.
-dstack_size equ 64*1024		; Feel free to edit this.
-rstack_size equ 64*1024		; Feel free to edit this.
-; Dictionary size is adjustable via the constants in that section.
-;
-; The order of segments is irrelevant, but may impact executable size.
-; To avoid padding, the dictionary's initial entries should come first.
-;
-
-align 8
-dict_bottom:
-DICTIONARY
-dict_start:
-rb (max_defns*defn_size) - (dict_start-dict_bottom)
-
-code_start:
-rb code_size
-
-rb dstack_size
-dstack_start:
-
-rb rstack_size
-rstack_start:
+	rb	1024 * 8
+space: ; Return stack and code space grow in different directions from the same point
+	rb	64 * 4096
