@@ -55,4 +55,6 @@ test_label:
 	push	rdx
 	pop	rdx
 
+	mov	rdx, [rbp]
+
 	ret

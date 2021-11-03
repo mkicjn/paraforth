@@ -25,7 +25,7 @@ macro POPA [arg] {reverse pop arg}
 ; To work, the following subroutines should behave the same as on Linux: sys_halt, sys_rx, sys_tx
 ; (These subroutines are only allowed to clobber rax)
 
-sys_halt:
+sys_exit:
 	mov	edi, eax
 	mov	eax, 60
 	syscall
@@ -59,6 +59,8 @@ sys_tx:
 ; The dictionary is a series of links placed before their corresponding code.
 ; Each link is just a pointer to the previous link and a counted string.
 
+; TODO: Experiment with more dictionary types to reduce size
+
 macro counted str {
 local a, b
 	db b - a
@@ -89,32 +91,12 @@ next:
 
 
 ;		Stack Model
-;
-; This implementation has a prologue and epilogue to handle the second stack.
-; That way, the hardware push/pop instructions can be used for the data stack.
 
-macro ENTER {
-	; Subroutine prologue (use at each entry)
-	lea	rbp, [rbp-8]
-	pop	qword [rbp]
-}
-macro EXIT {
-	; Subroutine epilogue (use instead of ret)
-	push	qword [rbp]
-	lea	rbp, [rbp+8]
-	ret
-}
 macro DPUSH reg {
-	push	reg
-}
-macro DPOP reg {
-	pop	reg
-}
-macro RPUSH reg {
 	lea	rbp, [rbp-8]
 	mov	[rbp], reg
 }
-macro RPOP reg {
+macro DPOP reg {
 	mov	reg, [rbp]
 	lea	rbp, [rbp+8]
 }
@@ -123,58 +105,80 @@ macro RPOP reg {
 ;
 ; (Defined in terms of the above, and each other)
 
-macro DUP {
+link 'DUP'
+postpone_dup_:
+	call	caller
+dup_:
 	DPUSH	rdx
 	mov	rdx, rax
-}
-macro DROP {
+	ret
+
+link 'DROP'
+	call	caller
+drop_:
 	mov	rax, rdx
 	DPOP	rdx
-}
-macro SWAP {
+	ret
+
+link 'SWAP'
+	call	caller
+swap_:
 	xchg	rax, rdx
 	; ^ There's a special encoding for xchg rax, r64
-}
+	ret
 
+link 'NIP'
+	call	caller
+nip_:
+	DPOP	rdx
+	ret
 
 ;		Arithmetic/Logic Operations
 ;
 ; These appear to be the minimal set necessary to implement an assembler in Forth.
 ; This was determined over the course of writing proto_asm.fth, which runs in Gforth.
 
-macro ADD {
+link '+'
+	call	caller
+add_:
 	add	rax, rdx
 	DPOP	rdx
-}
-macro SUB {
+	ret
+link '-'
+	call	caller
+sub_:
 	sub	rdx, rax
-	DROP
-}
-; Shifts are pretty long. Should they be subroutines?
-macro LSHIFT {
+	jmp	drop_
+
+link 'LSHIFT'
+	call	caller
+lshift:
 	mov	rbx, rcx
 	mov	ecx, eax
 	shl	rdx, cl
 	mov	rcx, rbx
-	DROP
-}
-macro RSHIFT {
+	jmp	drop_
+
+link 'RSHIFT'
+	call	caller
+rshift:
 	mov	rbx, rcx
 	mov	ecx, eax
 	shr	rdx, cl
 	mov	rcx, rbx
-	DROP
-}
+	jmp	drop_
 
 
 ;		Memory Operations
 ;
 ; It turns out that `C,` is the only necessary memory operation to write an assembler.
 
-macro C_ {
+
+link 'C,'
+	call	caller
+c_:
 	stosb
-	DROP
-}
+	jmp	drop_
 
 
 ;		Program Entry
@@ -187,11 +191,10 @@ start:
 	lea	rbp, [space]
 	mov	rdi, rbp
 
-.loop:	call	name
-	call	find
-	mov	rbx, rax
-	DROP
-	call	rbx
+; TODO: Investigate printing '[ ' as a prompt.
+; TODO bugfix: [ $ 5 ] [ $ 6 ] [ + ] does not yield the same results as  [ $ 5 $ 6 + ]. Why?
+
+.loop:	call	open
 	jmp	.loop
 ; ^ No error checking for now.
 ; When the compiler gets redefined later, it will be more featureful.
@@ -199,14 +202,10 @@ start:
 
 ;		Compilation Utilities
 ;
-; These make use of a technique I refer to as the "call before data" pattern.
+; This makes use of a technique I refer to as the "call before data" pattern.
 ; This saves some parameter passing by using the return address as an operand.
 
-; TODO idea: Consider switching to a pure subroutine threaded style just for the core, then metacompiling with custom assembler later.
-;            It may not be size or space efficient, but it might be made simpler by removing the need for inlining in the bootstrap phase.
-;            Needs further investigation.
-
-link '(CALL)'
+link 'DOCOL'
 	call	caller
 caller: ; call before data
 	pop	rbx
@@ -216,61 +215,31 @@ caller: ; call before data
 	mov	dword [rdi-4], ebx
 	ret
 
-; TODO idea: Later on, try implementing `[` to start compiling an anonymous definition, and `]` to end and execute it
-
-; TODO: Is there a good way to integrate inliner into the core?
-
-link '(INLINE)'
-	call	caller
-inliner: ; call before data
-	pop	rbx
-	PUSHA	rcx, rsi ;{
-	movzx	ecx, word [rbx]
-	lea	rsi, [rbx+2]
-	rep movsb
-	POPA	rcx, rsi ;}
+link 'DOLIT'
+dolit:	call	postpone_dup_
+	mov	word [rdi], 0xb848
+	lea	rdi, [rdi+2]
 	ret
 
-macro INLINE mac {
-	local a, b
-	call	inliner
-	dw b - a ; TODO: Is there a way to use bytes instead? Has issues with first definition because the link is too far away.
-a:	mac
-b:
-}
+; TODO: Can the words `[` and `]` be defined in the language itself?
 
+link '['
+open:	push	rdi
+.loop:	call	name
+	call	find
+	mov	rbx, rax
+	call	drop_
+	call	rbx
+	jmp	.loop
 
-;		Primitives
-;
-; These are the fundamental building blocks of the langauge.
-; They are inlined automatically for efficiency.
-;
-; An underscore following the name indicates that the subroutine compiles code.
-; This convention is much like much like `,` in Forth.
+link ']'
+close:	
+	call	exit_
+	pop	rbx
+	pop	rdi
+	jmp	rdi
 
-link 'ENTER'
-enter_:	INLINE ENTER
-link 'EXIT'
-exit_:	INLINE EXIT
-
-link 'DUP'
-dup_:	INLINE DUP
-link 'DROP'
-drop_:	INLINE DROP
-link 'SWAP'
-swap_:	INLINE SWAP
-
-link '+'
-add_:	INLINE ADD
-link '-'
-sub_:	INLINE SUB
-link 'LSHIFT'
-lsh_:	INLINE LSHIFT
-link 'RSHIFT'
-rsh_:	INLINE RSHIFT
-
-link 'C,'
-c_:	INLINE C_
+; TODO: `[` and `]` are like words for interpreting. As a companion to these, I want words for inlining, i.e. `{` and `}`
 
 
 ;		Built-Ins
@@ -280,21 +249,17 @@ c_:	INLINE C_
 
 link 'BYE'
 	call	caller
-bye:	jmp	sys_halt
+bye:	jmp	sys_exit
 
 link 'RX'
 	call	caller
-rx:	ENTER
-	DUP
-	call	sys_rx
-	EXIT
+rx:	call	dup_
+	jmp	sys_rx
 
 link 'TX'
 	call	caller
-tx:	ENTER
-	call	sys_tx
-	DROP
-	EXIT
+tx:	call	sys_tx
+	jmp	drop_
 
 link 'FIND'
 	call	caller
@@ -343,7 +308,8 @@ name_:	; rdi: compilation area
 	ja	.store
 	mov	[rdi], al ; store following space
 	pop	rax ;} len byte
-	lea	rbx, [rdi-1]
+	mov	rbx, rdi
+	dec	rbx
 	sub	rbx, rax
 	mov	[rax], bl
 	pop	rax ;} prev val
@@ -357,17 +323,21 @@ def_:	push	rax ;{
 	mov	rsi, rdi
 	stosw
 	pop	rax ;}
-	call	name_
+	jmp	name_
+
+link 'EXIT'
+	; immediate
+exit_:	mov	byte [rdi], 0xc3
+	inc	rdi
 	ret
 
 link 'NAME'
 	call	caller
-name:	ENTER
-	DUP
+name:	call	dup_
 	mov	rax, rdi
 	call	name_
 	mov	rdi, rax
-	EXIT
+	ret
 
 link 'DIGIT'
 	call	caller
@@ -383,20 +353,9 @@ digit:	; al: digit ASCII character [0-9A-Za-z]
 .ret:	movzx	eax, al
 	ret ; invalid characters return >35
 
-link 'LITERAL'
-	call	caller
-lit_:	ENTER
-	call	dup_
-	mov	word [rdi], 0xb848
-	lea	rdi, [rdi+2]
-	stosq
-	DROP
-	EXIT
-
 link '$'
 	; immediate
-hex_:	ENTER
-	DUP
+hex:	call	dup_
 	call	name
 	PUSHA rcx, rdx, rsi ;{
 	mov	rsi, rax
@@ -410,8 +369,9 @@ hex_:	ENTER
 	loop	.loop
 	mov	rax, rdx
 	POPA rcx, rdx, rsi ;}
-	call	lit_
-	EXIT
+	call	dolit
+	stosq
+	ret
 
 
 ;			Memory Map
