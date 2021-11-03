@@ -127,12 +127,6 @@ swap_:
 	; ^ There's a special encoding for xchg rax, r64
 	ret
 
-link 'NIP'
-	call	caller
-nip_:
-	DPOP	rdx
-	ret
-
 ;		Arithmetic/Logic Operations
 ;
 ; These appear to be the minimal set necessary to implement an assembler in Forth.
