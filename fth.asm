@@ -25,7 +25,7 @@ macro POPA [arg] {reverse pop arg}
 ; To work, the following subroutines should behave the same as on Linux: sys_halt, sys_rx, sys_tx
 ; (These subroutines are only allowed to clobber rax)
 
-sys_halt:
+sys_exit:
 	mov	edi, eax
 	mov	eax, 60
 	syscall
@@ -191,11 +191,10 @@ start:
 	lea	rbp, [space]
 	mov	rdi, rbp
 
-.loop:	call	name
-	call	find
-	mov	rbx, rax
-	call	drop_
-	call	rbx
+; TODO: Investigate printing '[ ' as a prompt.
+; TODO bugfix: [ $ 5 ] [ $ 6 ] [ + ] does not yield the same results as  [ $ 5 $ 6 + ]. Why?
+
+.loop:	call	open
 	jmp	.loop
 ; ^ No error checking for now.
 ; When the compiler gets redefined later, it will be more featureful.
@@ -222,9 +221,25 @@ dolit:	call	postpone_dup_
 	lea	rdi, [rdi+2]
 	ret
 
+; TODO: Can the words `[` and `]` be defined in the language itself?
 
-; TODO idea: Later on, try implementing `[` to start compiling an anonymous definition, and `]` to end and execute it
-; TODO: Need to implement inlining words later for efficiency
+link '['
+open:	push	rdi
+.loop:	call	name
+	call	find
+	mov	rbx, rax
+	call	drop_
+	call	rbx
+	jmp	.loop
+
+link ']'
+close:	
+	call	exit_
+	pop	rbx
+	pop	rdi
+	jmp	rdi
+
+; TODO: `[` and `]` are like words for interpreting. As a companion to these, I want words for inlining, i.e. `{` and `}`
 
 
 ;		Built-Ins
@@ -234,7 +249,7 @@ dolit:	call	postpone_dup_
 
 link 'BYE'
 	call	caller
-bye:	jmp	sys_halt
+bye:	jmp	sys_exit
 
 link 'RX'
 	call	caller
@@ -308,8 +323,7 @@ def_:	push	rax ;{
 	mov	rsi, rdi
 	stosw
 	pop	rax ;}
-	call	name_
-	ret
+	jmp	name_
 
 link 'EXIT'
 	; immediate
