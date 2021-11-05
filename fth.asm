@@ -184,14 +184,9 @@ start:
 	lea	rsi, [dict]
 	lea	rbp, [space]
 	mov	rdi, rbp
-
-; TODO: Investigate printing '[ ' as a prompt.
-; TODO bugfix: [ $ 5 ] [ $ 6 ] [ + ] does not yield the same results as  [ $ 5 $ 6 + ]. Why?
-
 .loop:	call	open
 	jmp	.loop
-; ^ No error checking for now.
-; When the compiler gets redefined later, it will be more featureful.
+; TODO: Investigate printing '[ ' as a prompt.
 
 
 ;		Compilation Utilities
@@ -225,6 +220,8 @@ open:	push	rdi
 	call	drop_
 	call	rbx
 	jmp	.loop
+; ^ No error checking for now.
+; When the compiler gets redefined later, it will be more featureful.
 
 link ']'
 close:	
@@ -365,7 +362,7 @@ hex:	call	dup_
 	POPA rcx, rdx, rsi ;}
 	call	dolit
 	stosq
-	ret
+	jmp	drop_
 
 
 ;			Memory Map
