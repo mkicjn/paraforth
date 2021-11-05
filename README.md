@@ -1,5 +1,5 @@
 # paraforth
-### A subroutine-threaded Forth focused on simplicity, extreme minimalism, and independence
+### A subroutine-threaded Forth focused on independence and extreme minimalism
 
 All documentation and design notes are inside the assembly file as inline comments.
 
@@ -19,7 +19,7 @@ and are willing to sacrifice performance for the sake of minimalism.
 My approach is motivated more by pragmatism, and still results in what I think is a similar (if not greater) level of minimalism,
 at the expense of some initial platform dependence.
 For instance, my implementation has (at the time of writing) 22 primitives, as opposed to eForth's 31.
-There are other major differences as well with my implmentation, such as the complete lack of variables.
+There are other major differences as well with my implementation, such as the complete lack of variables (including `STATE`).
 (Those are to be implemented later using subroutine stubs.)
 
 Hopefully there will eventually be a bootstrapping and metacompilation stage, as I described before.
