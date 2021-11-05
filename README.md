@@ -19,8 +19,15 @@ and are willing to sacrifice performance for the sake of minimalism.
 My approach is motivated more by pragmatism, and still results in what I think is a similar (if not greater) level of minimalism,
 at the expense of some initial platform dependence.
 For instance, my implementation has (at the time of writing) 22 primitives, as opposed to eForth's 31.
-There are other major differences as well with my implementation, such as the complete lack of variables (including `STATE`).
-(Those are to be implemented later using subroutine stubs.)
+There are other major differences as well with my implementation, such as lacking variables and a discrete interpreter.
+(Those can be implemented later using return stack manipulation and subroutine stubs.)
+
+Edit 11/4: Another observation I've just made is that previously, the core of this project was *sort of* minimal,
+but there were a lot of questions about which things should or shouldn't be built into the core as assembly language primitives.
+Oftentimes, they didn't strictly *need* to be in the core, but it simply made more sense or would have less overhead to put them there.
+This resulted in a conflict between multiple design goals. However, the recent change of focus provides some new direction:
+a word only *needs* to be a primitive if it cannot be implemented using existing primitives, **or the assembler built with those primitives.**
+Since assembly language words don't have to be in the core anymore, I'm not forced to compromise, and it's much easier to make the decision.
 
 Hopefully there will eventually be a bootstrapping and metacompilation stage, as I described before.
 I like the idea of inlining all primitives, but the core is smaller and simpler without this feature.
