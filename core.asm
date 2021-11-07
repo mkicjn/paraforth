@@ -311,7 +311,7 @@ name_:	; rdi: compilation area
 	pop	rax ;} prev val
 	ret
 
-link 'DEF'
+link ':!'
 	; immediate
 def_:	push	rax ;{
 	mov	rax, rdi
@@ -321,7 +321,7 @@ def_:	push	rax ;{
 	pop	rax ;}
 	jmp	name_
 
-link 'EXIT'
+link ';'
 	; immediate
 exit_:	mov	byte [rdi], 0xc3
 	inc	rdi

@@ -1,10 +1,10 @@
-ALL = fth
+ALL = core
 
 all: $(ALL)
 
-fth: fth.asm
-	fasm fth.asm
-	chmod +x fth
+core: core.asm
+	fasm core.asm
+	chmod +x core
 
 .PHONY: clean
 
