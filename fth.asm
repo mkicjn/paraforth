@@ -184,10 +184,12 @@ start:
 	lea	rsi, [dict]
 	lea	rbp, [space]
 	mov	rdi, rbp
-.loop:	call	open
+.loop:	call	name
+	call	find
+	mov	rbx, rax
+	call	drop_
+	call	rbx
 	jmp	.loop
-; TODO: Investigate printing '[ ' as a prompt.
-
 
 ;		Compilation Utilities
 ;
@@ -205,32 +207,35 @@ caller: ; call before data
 	ret
 
 link 'DOLIT'
+	call	caller
 dolit:	call	postpone_dup_
 	mov	word [rdi], 0xb848
 	lea	rdi, [rdi+2]
 	ret
 
-; TODO: Can the words `[` and `]` be defined in the language itself?
+;link '['
+;open:	push	rdi
+;.loop:	call	name
+;	call	find
+;	mov	rbx, rax
+;	call	drop_
+;	call	rbx
+;	jmp	.loop
+;; ^ No error checking for now.
+;; When the compiler gets redefined later, it will be more featureful.
+;
+;link ']'
+;close:
+;	call	exit_
+;	pop	rbx
+;	pop	rdi
+;	jmp	rdi
+;
 
-link '['
-open:	push	rdi
-.loop:	call	name
-	call	find
-	mov	rbx, rax
-	call	drop_
-	call	rbx
-	jmp	.loop
-; ^ No error checking for now.
-; When the compiler gets redefined later, it will be more featureful.
-
-link ']'
-close:	
-	call	exit_
-	pop	rbx
-	pop	rdi
-	jmp	rdi
-
-; TODO: `[` and `]` are like words for interpreting. As a companion to these, I want words for inlining, i.e. `{` and `}`
+; Completed TODO: Can the words `[` and `]` be defined in the language itself? A: Yes, easily.
+; TODO (follow-up): Investigate using `[` to drive the terminal, allowing `]` to execute immediately.
+; TODO (follow-up): Figure out a good way to print '[ ' as a prompt to hint that `]` does something.
+; TODO: As a companion to the "interpreter" words `[` and `]`, I want words that do the opposite and inline code, named `{` and `}`
 
 
 ;		Built-Ins
