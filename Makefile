@@ -1,10 +1,10 @@
-ALL = core
+ALL = kernel
 
 all: $(ALL)
 
-core: core.asm
-	fasm core.asm
-	chmod +x core
+kernel: kernel.asm
+	fasm kernel.asm
+	chmod +x kernel
 
 .PHONY: clean
 
