@@ -351,8 +351,7 @@ digit:	; al: digit ASCII character [0-9A-Za-z]
 
 link '$'
 	; immediate
-hex:	call	dup_
-	call	name
+hex:	call	name
 	PUSHA rcx, rdx, rsi ;{
 	mov	rsi, rax
 	lodsb

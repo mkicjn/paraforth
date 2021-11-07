@@ -23,7 +23,7 @@
 
 :! HERE   DOCOL  DUP  RAX RDI MOVQ ;
 :! REL32, DOCOL  HERE $ 4 + - D, ;
-:! REL8,  DOCOL  HERE $ 1 + - D, ;
+:! REL8,  DOCOL  HERE $ 1 + - C, ;
 
 :! MOVQ!  REX.W,  $ 89 C,  $ 0 MODR/M, ;
 :! MOVQ@  REX.W,  $ 8B C,  $ 0 MODR/M, ;
@@ -66,7 +66,6 @@
 :! JMPQ$  $ E9 C, REL32, ;
 :! JZQ$   $ 840F W, REL32, ;
 :! JNZQ$  $ 850F W, REL32, ;
-
 
 :! REP    $ F3 C, ;
 :! REPE   $ F3 C, ;
