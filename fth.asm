@@ -233,9 +233,9 @@ dolit:	call	postpone_dup_
 ;
 
 ; Completed TODO: Can the words `[` and `]` be defined in the language itself? A: Yes, easily.
-; TODO (follow-up): Investigate using `[` to drive the terminal, allowing `]` to execute immediately.
-; TODO (follow-up): Figure out a good way to print '[ ' as a prompt to hint that `]` does something.
-; TODO: As a companion to the "interpreter" words `[` and `]`, I want words that do the opposite and inline code, named `{` and `}`
+; TODO (follow-up): Investigate using `[` to drive the terminal (i.e. as part of `QUIT`), allowing `]` to execute immediately.
+; TODO (follow-up): Figure out a good way to print '[ ' as a prompt (hinting that `]` does something).
+; TODO: Add more error handling to `[`, namely printing unknown names with a question mark, skipping the line, and `QUIT`ting.
 
 
 ;		Built-Ins
