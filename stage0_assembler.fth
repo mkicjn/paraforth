@@ -48,11 +48,22 @@
 :! PUSHQ  $ 50 + C, ;
 :! POPQ   $ 58 + C, ;
 
+:! DUPXORQ  DUP $ 31 C, $ 3 MODR/M, ;
 :! ANDQ  REX.W, $ 21 C, $ 3 MODR/M, ;
 :!  ORQ  REX.W, $ 09 C, $ 3 MODR/M, ;
 :! XORQ  REX.W, $ 31 C, $ 3 MODR/M, ;
 :! NOTQ  REX.W, $ F7 C, $ 2 $ 3 MODR/M, ;
 :! NEGQ  REX.W, $ F7 C, $ 3 $ 3 MODR/M, ;
+
+:! SHRQ$  REX.W, $ C1 C, $ 5 $ 3 MODR/M, C, ;
+:! SHLQ$  REX.W, $ C1 C, $ 6 $ 3 MODR/M, C, ;
+:! SARQ$  REX.W, $ C1 C, $ 7 $ 3 MODR/M, C, ;
+:! 1SHLQ  REX.W, $ D1 C, $ 5 $ 3 MODR/M, ;
+:! 1SHRQ  REX.W, $ D1 C, $ 6 $ 3 MODR/M, ;
+:! 1SARQ  REX.W, $ D1 C, $ 7 $ 3 MODR/M, ;
+:! CLSHRQ  REX.W, $ D3 C, $ 5 $ 3 MODR/M, ;
+:! CLSHLQ  REX.W, $ D3 C, $ 6 $ 3 MODR/M, ;
+:! CLSARQ  REX.W, $ D3 C, $ 7 $ 3 MODR/M, ;
 
 :! CMPQ   REX.W, $ 39 C, $ 3 MODR/M, ;
 :! TESTQ  REX.W, $ 85 C, $ 3 MODR/M, ;

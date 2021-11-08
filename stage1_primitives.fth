@@ -16,6 +16,15 @@
 :! UNTIL  POSTPONE COND POSTPONE JZ$ ;
 :! THEN  THERE  DUP REL8,  THERE DROP ;
 :! ELSE  POSTPONE AHEAD  SWAP  POSTPONE THEN ;
+:! WHILE  POSTPONE IF  SWAP ;
+
+: STARTFOR  RBX POPQ  RCX PUSHQ  RBX PUSHQ  RCX RAX MOVQ  DROP ;
+: ENDFOR  RBX POPQ  RCX POPQ  RBX PUSHQ ;
+:! FOR  POSTPONE STARTFOR HERE ;
+:! AFT  DROP POSTPONE AHEAD POSTPONE BEGIN SWAP ;
+:! NEXT  POSTPONE LOOP$ POSTPONE ENDFOR ;
+: I  DUP  RAX RCX MOVQ ;
+
 
 : EXECUTE   RBX RAX MOVQ  DROP  RBX JMP
 :! [  RDI PUSHQ  BEGIN NAME FIND EXECUTE AGAIN
@@ -43,13 +52,38 @@
 :! {  POSTPONE INLINE  HERE  1ALLOT ;
 :! }  DUP 1+  HERE SWAP -  SWAP C! ;
 
+: TEST  $ 7F FOR AFT I TX THEN NEXT ;
+[ TEST ]
 
-INT3!
 
-:! 1+ { RAX INCQ }
-INT3!
 
-: TEST  $ 40 IF DUP TX ELSE 1+ DUP TX THEN ;
-INT3!
+[ BYE ] \ Comments aren't implemented yet, but this halts the compiler before it reads beyond this.
 
-[ TEST BYE ]
+\ These are some source code fragments for words that I want to implement soon.
+\ They are by no means complete or functional in their current form.
+
+\ TODO Rewrite `{` and `}` to not exit the word they're in
+
+: NIP   ( what's the best way? rbp indirection is hard at the moment. primitives? )
+: TUCK  ( ^ ditto )
+: OVER  ( ^ ditto )
+
+: 0=  RBX DUPXORQ  RAX RAX TESTQ  RBX SETNZB  RBX DEC  RAX RBX MOVQ ;
+: =   RBX DUPXORQ  RDX RAX CMPQ   RBX SETNZB  RBX DEC  RAX RBX MOVQ  NIP ;
+:! \  BEGIN TX $ A = UNTIL ;
+
+: *  RDX MUL  NIP ;
+: LITERAL  DOLIT , ;
+: CHAR  NAME 1+ C@ LITERAL ;
+: TYPE  FOR DUP C@ TX 1+ NEXT DROP ;
+: #  $ 0 NAME  COUNT FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP ;
+: TX#  $ 0 >R  BEGIN  # 10 /MOD  R> 1+ >R  DUP 0= UNTIL  DROP
+       R> 1- FOR  $ 30 + TX  NEXT ;
+: BL  $ 20 ;
+: CR  $ A EMIT ;
+: REL8!  HERE OVER 1+ - SWAP C! ;
+: PARSE,  HERE 1ALLOT  >R RX BEGIN DUP R@ <> WHILE C, RX REPEAT DROP
+          HERE OVER 1+ - SWAP C! ;
+: PARSE   HERE PARSE, THERE DROP ;
+: S"  HERE POSTPONE AHEAD  CHAR " PARSE,  POSTPONE THEN  LITERAL ;
+: ."  POSTPONE S" { COUNT TYPE } ;
