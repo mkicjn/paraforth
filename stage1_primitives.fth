@@ -62,7 +62,11 @@
 \ These are some source code fragments for words that I want to implement soon.
 \ They are by no means complete or functional in their current form.
 
-\ TODO Rewrite `{` and `}` to not exit the word they're in
+\ TODO Investigate using `[` to drive the terminal (i.e. as part of `QUIT`), allowing `]` to execute immediately.
+\ TODO Figure out a good way to print '[ ' as a prompt (hinting that `]` does something).
+\ TODO Add more error handling to `[`, namely printing unknown names with a question mark, skipping the line, and `QUIT`ting.
+
+\ TODO Rewrite `{` and `}` to not forcefully exit the word they're in.
 
 : NIP   ( what's the best way? rbp indirection is hard at the moment. primitives? )
 : TUCK  ( ^ ditto )

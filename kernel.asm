@@ -101,6 +101,7 @@ macro DPOP reg {
 	lea	rbp, [rbp+8]
 }
 
+
 ;		Stack Operations
 ;
 ; (Defined in terms of the above, and each other)
@@ -126,6 +127,7 @@ swap_:
 	xchg	rax, rdx
 	; ^ There's a special encoding for xchg rax, r64
 	ret
+
 
 ;		Arithmetic/Logic Operations
 ;
@@ -191,6 +193,7 @@ start:
 	call	rbx
 	jmp	.loop
 
+
 ;		Compilation Utilities
 ;
 ; This makes use of a technique I refer to as the "call before data" pattern.
@@ -212,30 +215,6 @@ dolit:	call	postpone_dup_
 	mov	word [rdi], 0xb848
 	lea	rdi, [rdi+2]
 	ret
-
-;link '['
-;open:	push	rdi
-;.loop:	call	name
-;	call	find
-;	mov	rbx, rax
-;	call	drop_
-;	call	rbx
-;	jmp	.loop
-;; ^ No error checking for now.
-;; When the compiler gets redefined later, it will be more featureful.
-;
-;link ']'
-;close:
-;	call	exit_
-;	pop	rbx
-;	pop	rdi
-;	jmp	rdi
-;
-
-; Completed TODO: Can the words `[` and `]` be defined in the language itself? A: Yes, easily.
-; TODO (follow-up): Investigate using `[` to drive the terminal (i.e. as part of `QUIT`), allowing `]` to execute immediately.
-; TODO (follow-up): Figure out a good way to print '[ ' as a prompt (hinting that `]` does something).
-; TODO: Add more error handling to `[`, namely printing unknown names with a question mark, skipping the line, and `QUIT`ting.
 
 
 ;		Built-Ins
