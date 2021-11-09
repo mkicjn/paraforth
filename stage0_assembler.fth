@@ -28,6 +28,8 @@
 :! MOVQ!  REX.W,  $ 89 C,  $ 0 MODR/M, ;
 :! MOVQ@  REX.W,  $ 8B C,  $ 0 MODR/M, ;
 :! MOVQ$  REX.W,  SWAP $ B8 + C,  , ;
+:! RBPMOVQ@  $ 5 SWAP  REX.W, $ 8B C, $ 1 MODR/M, $ 0 C, ;
+:! RBPMOVQ!  $ 5 SWAP  REX.W, $ 89 C, $ 1 MODR/M, $ 0 C, ;
 
 :! MOVB!  $ 88 C, $ 0 MODR/M, ;
 :! MOVZXB@  REX.W, $ B60F W, SWAP $ 0 MODR/M, ;
@@ -67,6 +69,8 @@
 
 :! CMPQ   REX.W, $ 39 C, $ 3 MODR/M, ;
 :! TESTQ  REX.W, $ 85 C, $ 3 MODR/M, ;
+
+:! SETNZB  $ 950F W, $ 0 $ 3 MODR/M, ;
 
 :! JMP$  $ EB C, REL8, ;
 :! LOOP$  $ E2 C, REL8, ;
