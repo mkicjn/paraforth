@@ -2,7 +2,7 @@
 :! :  POSTPONE :! POSTPONE DOCOL ;
 
 :! DPOPQ  POSTPONE RBPMOVQ@  POSTPONE RBP $ 8 POSTPONE ADDQ$ ;
-:! DPUSHQ   POSTPONE RBP $ 8 POSTPONE SUBQ$   POSTPONE RBPMOVQ! ;
+:! DPUSHQ  POSTPONE RBP $ 8 POSTPONE SUBQ$  POSTPONE RBPMOVQ! ;
 
 : NIP  RDX DPOPQ ;
 : TUCK  RAX DPUSHQ ;
@@ -50,7 +50,7 @@
 : LITERAL  DOLIT , ;
 :! CHAR  NAME 1+ C@ LITERAL ;
 
-: EXECUTE   RBX RAX MOVQ  DROP  RBX JMP
+: EXECUTE  RBX RAX MOVQ  DROP  RBX JMP
 :! [  RDI PUSHQ  BEGIN  NAME DUP FIND  DUP
                  IF  NIP EXECUTE
                  ELSE  DROP  COUNT TYPE  CHAR ? TX  CR  POSTPONE \
@@ -65,10 +65,12 @@
 
 : >R  RBX POPQ  RAX PUSHQ  RBX PUSHQ  DROP ;
 : R>  DUP  RBX POPQ  RAX POPQ  RBX PUSHQ ;
+: R@  DUP  RBX POPQ  RAX POPQ  RAX PUSHQ RBX PUSHQ ;
+\ TODO fix ^ Like RBP, MOVQ! doesn't work as intended with RSP due to SIB encoding
 : RDROP  RBX POPQ  RSP [ $ 8 ] ADDQ$  RBX PUSHQ ;
 
-: CONTEXT>R  RBX POPQ   RCX PUSHQ RSI PUSHQ RDI PUSHQ  RBX PUSHQ ;
-: R>CONTEXT  RBX POPQ   RDI POPQ  RSI POPQ  RCX POPQ   RBX PUSHQ ;
+: CONTEXT>R  RBX POPQ  RCX PUSHQ RSI PUSHQ RDI PUSHQ  RBX PUSHQ ;
+: R>CONTEXT  RBX POPQ  RDI POPQ  RSI POPQ  RCX POPQ   RBX PUSHQ ;
 : MOVE  CONTEXT>R  RDI RAX MOVQ DROP  RCX RAX MOVQ DROP  RSI RAX MOVQ  REP MOVSB
         RAX RDI MOVQ  R>CONTEXT  RDI RAX MOVQ  DROP ;
 \ TODO ^ Refactor
@@ -79,8 +81,15 @@
 \ ^ Hopefully these can be used later for metacompilation.
 \ Right now they are of limited usefulness, since the kernel is committed to mostly pure subroutine-threaded code for simplicity.
 
+: *  RDX MULQ  NIP ;
+: UM/MOD  RBX RAX MOVQ  RAX RDX MOVQ  RDX DUPXORQ  RBX DIVQ ;
 
-: TEST  $ 4D TX  $ 1 $ 2 =  IF $ 49 TX ELSE $ 4A TX THEN CR ;
+:! #  $ 0 NAME  COUNT FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP  LITERAL ;
+: .#  $ 0  BEGIN >R  # 10 UM/MOD  R> 1+  OVER 0= UNTIL  NIP
+       FOR  $ 30 + TX  NEXT ;
+\ TODO ^ Refactor words like these that are hard to read
+
+: TEST  # 0123456789 .# BYE ;
 [ TEST ]
 
 
@@ -96,12 +105,7 @@
 
 \ TODO Rewrite `{` and `}` to not forcefully exit the word they're in.
 
-: *  RDX MUL  NIP ;
-: #  $ 0 NAME  COUNT FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP ;
-: TX#  $ 0 >R  BEGIN  # 10 /MOD  R> 1+ >R  DUP 0= UNTIL  DROP
-       R> 1- FOR  $ 30 + TX  NEXT ;
 
-: REL8!  HERE OVER 1+ - SWAP C! ;
 : PARSE,  HERE 1ALLOT  >R RX BEGIN DUP R@ <> WHILE C, RX REPEAT DROP
           HERE OVER 1+ - SWAP C! ;
 : PARSE   HERE PARSE, THERE DROP ;
