@@ -7,6 +7,8 @@
 : NIP  RDX DPOPQ ;
 : TUCK  RAX DPUSHQ ;
 : OVER  SWAP TUCK ;
+: 2DUP  RDX DPUSHQ  RAX DPUSHQ ;
+: 2DROP  RAX DPOPQ  RDX DPOPQ ;
 
 : THERE  RDI RAXXCHGQ  ;
 : ALLOT  RDI RAX ADDQ  DROP ;
@@ -25,9 +27,12 @@
 :! THEN  THERE  DUP REL8,  THERE DROP ;
 :! ELSE  POSTPONE AHEAD  SWAP  POSTPONE THEN ;
 :! WHILE  POSTPONE IF  SWAP ;
+:! REPEAT  POSTPONE AGAIN  POSTPONE THEN ;
 
+:! 0<  POSTPONE RAX  $ 3F POSTPONE SARQ$ ;
 : 0=  RBX DUPXORQ  RAX RAX TESTQ  RBX SETNZB  RBX DECQ  RAX RBX MOVQ ;
 : =  RBX DUPXORQ  RDX RAX CMPQ  RBX SETNZB  RBX DECQ  RAX RBX MOVQ  NIP ;
+: <>  RBX DUPXORQ  RDX RAX CMPQ  RBX SETZB  RBX DECQ  RAX RBX MOVQ  NIP ;
 :! \  BEGIN  RX $ A =  UNTIL ;
 
 \ Comments are now enabled!
@@ -86,11 +91,20 @@
 
 :! #  $ 0 NAME  COUNT FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP  LITERAL ;
 : .#  $ 0  BEGIN >R  # 10 UM/MOD  R> 1+  OVER 0= UNTIL  NIP
-       FOR  $ 30 + TX  NEXT ;
+       FOR  CHAR 0 + TX  NEXT ;
 \ TODO ^ Refactor words like these that are hard to read
 
-: TEST  # 0123456789 .# BYE ;
-[ TEST ]
+: PARSE,  HERE SWAP 1ALLOT
+          RX BEGIN 2DUP <> WHILE C, RX REPEAT 2DROP
+          HERE OVER 1+ - SWAP C! ;
+\ TODO Might help to have words for generating counted strings
+: PARSE  HERE SWAP PARSE, THERE DROP ;
+:! S"  POSTPONE AHEAD  HERE CHAR " PARSE,  SWAP POSTPONE THEN  LITERAL ;
+\ TODO The bug where I forgot the SWAP before POSTPONE THEN was hard to catch; I need words that will check stack depth after a definition to ensure correctness.
+\ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.
+:! ."  POSTPONE S"  POSTPONE COUNT  POSTPONE TYPE ;
+
+[ ." Hello, world!" CR ]
 
 
 
@@ -104,12 +118,3 @@
 \ TODO Add more error handling to `[`, namely printing unknown names with a question mark, skipping the line, and `QUIT`ting.
 
 \ TODO Rewrite `{` and `}` to not forcefully exit the word they're in.
-
-
-: PARSE,  HERE 1ALLOT  >R RX BEGIN DUP R@ <> WHILE C, RX REPEAT DROP
-          HERE OVER 1+ - SWAP C! ;
-: PARSE   HERE PARSE, THERE DROP ;
-
-: CHAR  NAME 1+ C@ LITERAL ;
-: S"  HERE POSTPONE AHEAD  CHAR " PARSE,  POSTPONE THEN  LITERAL ;
-: ."  POSTPONE S" { COUNT TYPE } ;

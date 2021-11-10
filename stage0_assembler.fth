@@ -70,6 +70,7 @@
 :! CMPQ   REX.W, $ 39 C, $ 3 MODR/M, ;
 :! TESTQ  REX.W, $ 85 C, $ 3 MODR/M, ;
 
+:! SETZB   $ 940F W, $ 0 $ 3 MODR/M, ;
 :! SETNZB  $ 950F W, $ 0 $ 3 MODR/M, ;
 
 :! JMP$  $ EB C, REL8, ;
