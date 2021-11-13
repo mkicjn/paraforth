@@ -57,11 +57,11 @@
 :! NOTQ  REX.W, $ F7 C, $ 2 $ 3 MODR/M, ;
 :! NEGQ  REX.W, $ F7 C, $ 3 $ 3 MODR/M, ;
 
-:! SHRQ$  REX.W, $ C1 C, $ 5 $ 3 MODR/M, C, ;
-:! SHLQ$  REX.W, $ C1 C, $ 6 $ 3 MODR/M, C, ;
-:! SARQ$  REX.W, $ C1 C, $ 7 $ 3 MODR/M, C, ;
-:! 1SHLQ  REX.W, $ D1 C, $ 5 $ 3 MODR/M, ;
-:! 1SHRQ  REX.W, $ D1 C, $ 6 $ 3 MODR/M, ;
+:! SHRQ$  SWAP REX.W, $ C1 C, $ 5 $ 3 MODR/M, C, ;
+:! SHLQ$  SWAP REX.W, $ C1 C, $ 6 $ 3 MODR/M, C, ;
+:! SARQ$  SWAP REX.W, $ C1 C, $ 7 $ 3 MODR/M, C, ;
+:! 1SHRQ  REX.W, $ D1 C, $ 5 $ 3 MODR/M, ;
+:! 1SHLQ  REX.W, $ D1 C, $ 6 $ 3 MODR/M, ;
 :! 1SARQ  REX.W, $ D1 C, $ 7 $ 3 MODR/M, ;
 :! CLSHRQ  REX.W, $ D3 C, $ 5 $ 3 MODR/M, ;
 :! CLSHLQ  REX.W, $ D3 C, $ 6 $ 3 MODR/M, ;
@@ -72,6 +72,12 @@
 
 :! SETZB   $ 940F W, $ 0 $ 3 MODR/M, ;
 :! SETNZB  $ 950F W, $ 0 $ 3 MODR/M, ;
+:! SETLB   $ 9C0F W, $ 0 $ 3 MODR/M, ;
+
+:! CMOVAQ  REX.W, $ 470F W, $ 3 MODR/M, ;
+:! CMOVBQ  REX.W, $ 420F W, $ 3 MODR/M, ;
+:! CMOVGQ  REX.W, $ 4F0F W, $ 3 MODR/M, ;
+:! CMOVLQ  REX.W, $ 4C0F W, $ 3 MODR/M, ;
 
 :! JMP$  $ EB C, REL8, ;
 :! LOOP$  $ E2 C, REL8, ;
