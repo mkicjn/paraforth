@@ -7,8 +7,15 @@
 : NIP  RDX DPOPQ ;
 : TUCK  RAX DPUSHQ ;
 : OVER  SWAP TUCK ;
+: ROT  RBX DPOPQ  DUP  RAX RBX MOVQ ;
+: -ROT  RBX RAX MOVQ  DROP  RBX DPUSHQ ;
+
 : 2DUP  RDX DPUSHQ  RAX DPUSHQ ;
 : 2DROP  RAX DPOPQ  RDX DPOPQ ;
+
+: COMPILE  POSTPONE CALLQ$ ;
+: LITERAL  DOLIT , ;
+: 2LITERAL  SWAP LITERAL LITERAL ;
 
 : THERE  RDI RAXXCHGQ  ;
 : ALLOT  RDI RAX ADDQ  DROP ;
@@ -53,8 +60,6 @@
 
 : CR  $ A TX ;
 : BL  $ 20 ;
-: COMPILE  POSTPONE CALLQ$ ;
-: LITERAL  DOLIT , ;
 :! CHAR  NAME 1+ C@ LITERAL ;
 
 : EXECUTE  RBX RAX MOVQ  DROP  RBX JMP
@@ -104,22 +109,18 @@
 \ TODO Retest inlining and `MOVE` since refactor
 
 :! #  $ 0 NAME  COUNT FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP  LITERAL ;
-: .#  $ 0  BEGIN >R  # 10 UM/MOD  R> 1+  OVER 0= UNTIL  NIP
-       FOR  CHAR 0 + TX  NEXT ;
+: .#  $ 0  BEGIN >R  # 10 UM/MOD  R> 1+  OVER 0= UNTIL  NIP  FOR  CHAR 0 + TX  NEXT ;
 \ TODO ^ Refactor words like these that are hard to read
 \ TODO Might help to have words for generating counted strings
-\ TODO Add signed I/O for decimal output
+\ TODO Add signed decimal I/O
 
-: PARSE,  HERE SWAP 1ALLOT
-          RX BEGIN 2DUP <> WHILE C, RX REPEAT 2DROP
-          HERE OVER 1+ - SWAP C! ;
-\ TODO Avoid the use of counted words for PARSE
-: PARSE  HERE SWAP PARSE, DUP THERE DROP ;
-:! S"  POSTPONE AHEAD  HERE CHAR " PARSE,  SWAP POSTPONE THEN  LITERAL ;
-\ TODO The bug where I forgot the SWAP before POSTPONE THEN was hard to catch; I need words that will check stack depth after a definition to ensure correctness.
+: PARSE,  RX BEGIN 2DUP <> WHILE C, RX REPEAT 2DROP ;
+: PARSE  HERE SWAP PARSE, DUP THERE OVER - ;
+:! S"  POSTPONE AHEAD  HERE CHAR " PARSE,  HERE OVER -  ROT POSTPONE THEN  2LITERAL ;
+\ TODO Check stack depth after definitions to ensure correctness.
 \ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.
-:! ."  POSTPONE S"  POSTPONE COUNT  POSTPONE TYPE ;
-:! (  CHAR ) PARSE DROP ;
+:! ."  POSTPONE S"  POSTPONE TYPE ;
+:! (  CHAR ) PARSE 2DROP ;
 ( Parenthesis commments are now allowed, too! )
 
 : SIGN  DUP IF  0< ( -1|0 ) 1+ ( 0|1 ) 2* ( 0|2 ) 1- ( -1|1 ) THEN ;
@@ -128,16 +129,11 @@
 	   RAX SETNZB  RBX SETLB  RBX NEGQ  RAX RBX ORQ
 	   DUP IF NIP ELSE DROP THEN  3R> CONTEXT! ;
 
-[ S" ABCD" COUNT S" ABC" COUNT COMPARE .# CR ]
-
 [ ." Hello, world!" CR ]
 
 
 
 [ BYE ]
-
-\ These are some source code fragments for words that I want to implement soon.
-\ They are by no means complete or functional in their current form.
 
 
 \ TODO Investigate using `[` to drive the terminal (i.e. as part of `QUIT`), allowing `]` to execute immediately.
