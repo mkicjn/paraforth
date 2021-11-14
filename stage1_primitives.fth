@@ -13,7 +13,6 @@
 : 2DUP  RDX DPUSHQ  RAX DPUSHQ ;
 : 2DROP  RAX DPOPQ  RDX DPOPQ ;
 
-: COMPILE  POSTPONE CALLQ$ ;
 : LITERAL  DOLIT , ;
 : 2LITERAL  SWAP LITERAL LITERAL ;
 
@@ -52,8 +51,10 @@
 :! NEXT  POSTPONE LOOP$ POSTPONE ENDFOR ;
 : I  DUP  RAX RCX MOVQ ;
 
+: @  RAX RAX MOVQ@ ;
+: !  RAX RDX MOVQ! 2DROP ;
 : C@  RAX RAX MOVZXB@ ;
-: C!  RAX RDX MOVB!  DROP DROP ;
+: C!  RAX RDX MOVB!  2DROP ;
 
 : COUNT  1+ DUP 1- C@ ;
 : TYPE  FOR DUP C@ TX 1+ NEXT DROP ;
@@ -63,11 +64,12 @@
 :! CHAR  NAME 1+ C@ LITERAL ;
 
 : EXECUTE  RBX RAX MOVQ  DROP  RBX JMP
+: NOT-FOUND  COUNT TYPE CHAR ? TX CR POSTPONE \
+\ TODO ^ POSTPONE \ should be replaced by QUIT later.
 :! [  RDI PUSHQ  BEGIN  NAME DUP FIND  DUP
                  IF  NIP EXECUTE
-                 ELSE  DROP  COUNT TYPE  CHAR ? TX  CR  POSTPONE \
-\ TODO ^ POSTPONE \ should be replaced by QUIT later.
-                 THEN AGAIN
+                 ELSE  DROP NOT-FOUND
+                 THEN AGAIN ;
 :! ]  POSTPONE ;  RBX POPQ  RDI POPQ  RDI JMP
 [
 \ TODO ^ This should also be replaced by QUIT later.
@@ -125,15 +127,37 @@
 
 : SIGN  DUP IF  0< ( -1|0 ) 1+ ( 0|1 ) 2* ( 0|2 ) 1- ( -1|1 ) THEN ;
 : COMPARE  CONTEXT@ 3>R  >R SWAP R>  2DUP - SIGN >R  MIN  CONTEXT!
-	   R> DUP  RAX DUPXORQ  RBX DUPXORQ  REP CMPSB
-	   RAX SETNZB  RBX SETLB  RBX NEGQ  RAX RBX ORQ
-	   DUP IF NIP ELSE DROP THEN  3R> CONTEXT! ;
+           R> DUP  RAX DUPXORQ  RBX DUPXORQ  REP CMPSB
+           RAX SETNZB  RBX SETLB  RBX NEGQ  RAX RBX ORQ
+           DUP IF NIP ELSE DROP THEN  3R> CONTEXT! ;
 
+: LATEST  DUP  RAX RSI MOVQ ;
+: >NAME  $ 2 + ; \ Skip 16 bit offset
+: >XT  >NAME COUNT + ; \ Skip length of string
+: >BODY  >XT $ 5 + ; \ Skip length of call instruction
+
+: DOCREATE  R> LITERAL ;
+: CREATE  POSTPONE :! POSTPONE DOCREATE ;
+: DODOES>  LATEST >XT THERE R> COMPILE THERE DROP ;
+:! DOES>  POSTPONE DODOES> POSTPONE R>  ;
+\ Since this is a compile-only Forth, CREATE and DOES> works a little differently.
+\ CREATE is not immediate, which means `CREATE _ ALLOT` won't work.
+\ DOES> redefines the CREATEd word as immediate, giving the opportunity for some code generation.
+\ TODO Find workarounds for these differences. For DOES>, can probably place DOCOL after DOES>. What about CREATE?
+:! CONSTANT  CREATE , DOES> @ LITERAL ;
+[ $ 8 ] CONSTANT CELL
+:! VARIABLE  CREATE CELL ALLOT ;
+: CELLS  RAX [ $ 3 ] SHLQ$ ;
+
+VARIABLE X
+
+[ $ DEADBEEF X ! ]
 [ ." Hello, world!" CR ]
-
-
-
+[ X @ .# CR ]
 [ BYE ]
+
+
+
 
 
 \ TODO Investigate using `[` to drive the terminal (i.e. as part of `QUIT`), allowing `]` to execute immediately.
