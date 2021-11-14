@@ -126,7 +126,7 @@
 ( Parenthesis commments are now allowed, too! )
 
 : SIGN  DUP IF  0< ( -1|0 ) 1+ ( 0|1 ) 2* ( 0|2 ) 1- ( -1|1 ) THEN ;
-: COMPARE  CONTEXT@ 3>R  >R SWAP R>  2DUP - SIGN >R  MIN  CONTEXT!
+: COMPARE  CONTEXT@ 3>R  ROT SWAP  2DUP - SIGN >R  MIN  CONTEXT!
            R> DUP  RAX DUPXORQ  RBX DUPXORQ  REP CMPSB
            RAX SETNZB  RBX SETLB  RBX NEGQ  RAX RBX ORQ
            DUP IF NIP ELSE DROP THEN  3R> CONTEXT! ;
