@@ -1,7 +1,41 @@
 # paraforth
-### A subroutine-threaded Forth focused on independence and extreme minimalism
+### A minimal Forth compiler and assembler in <1K, intended to seed an independent software stack
 
-All documentation and design notes are inside the assembly file as inline comments.
+#### Project Goals:
+
+1. Produce a Forth compiler supporting the minimal operations necessary to write an assembler
+2. Implement an assembler using the compiler
+3. Extend the existing Forth compiler in-place using the assembler
+4. Metacompile and bootstrap a more featureful (non-minimal) Forth
+    * At the minimum, will include improved error handling and an elegant inlining system
+
+The project is an active work in progress, currently on **Stage 3**.
+
+#### Current Features:
+
+* Compile-only Forth, with no `STATE` variable and no interpreter buffer
+    * Code can still be "interpreted" (i.e. compiled and then run immediately) using `[` and `]`
+* Subroutine-threaded code
+    * Mostly pure at the moment for simplicity, but with support for inlining in the future
+* x86-64 assembler
+    * No performance compromises due to lack of primitives
+
+Before this project was rewritten, an extensive set of design notes existed in the source code comments.
+The current revision is deficient in this regard, and will be improved in the future.
+
+#### Current Dependencies:
+
+* FASM (to assemble the kernel)
+* Linux (for system calls)
+
+My hope for this project is it will eventually become fully self-hosting, perhaps even down to the OS level in the distant future.
+
+#### Usage Notes:
+
+* Compile with `make`
+* Run with `cat input | ./kernel > output`
+* Debug with `gdb kernel -ex 'r < <(input)'` and an `int3` somewhere
+* Disassemble using `objdump -b binary -m i386:x86-64 -D kernel`
 
 ## State of the Project (11/2/2021)
 
