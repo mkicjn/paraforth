@@ -1,5 +1,5 @@
 # paraforth
-### A minimal Forth compiler and assembler in <1K, intended to seed an independent software stack
+### A minimal native code Forth in <1K, intended to seed an independent software stack as a macro assembler
 
 #### Project Goals:
 
