@@ -1,10 +1,14 @@
-ALL = kernel
+ALL = kernel out
 
 all: $(ALL)
 
 kernel: kernel.asm
 	fasm kernel.asm
-	chmod +x kernel
+	chmod +x $@
+
+out: kernel stage*
+	cat stage* | ./kernel > $@
+	chmod +x $@
 
 .PHONY: clean
 

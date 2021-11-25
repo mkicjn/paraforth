@@ -103,13 +103,6 @@
 
 : MOVE  CONTEXT@ 3>R  CONTEXT!  REP MOVSB  3R> CONTEXT! ;
 
-: INLINE  R> COUNT HERE SWAP  2DUP + >R  MOVE  R> THERE DROP ;
-:! {  POSTPONE INLINE  HERE  1ALLOT ;
-:! }  DUP 1+  HERE SWAP -  SWAP C! ;
-\ ^ Hopefully these can be used later for metacompilation.
-\ Right now they are of limited usefulness, since the kernel is committed to mostly pure subroutine-threaded code for simplicity.
-\ TODO Retest inlining and `MOVE` since refactor
-
 :! #  $ 0 NAME  COUNT FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP  LITERAL ;
 : .#  $ 0  BEGIN >R  # 10 UM/MOD  R> 1+  OVER 0= UNTIL  NIP  FOR  CHAR 0 + TX  NEXT ;
 \ TODO ^ Refactor words like these that are hard to read
@@ -148,16 +141,6 @@
 [ $ 8 ] CONSTANT CELL
 :! VARIABLE  CREATE CELL ALLOT ;
 : CELLS  RAX [ $ 3 ] SHLQ$ ;
-
-VARIABLE X
-
-[ $ DEADBEEF X ! ]
-[ ." Hello, world!" CR ]
-[ X @ .# CR ]
-[ BYE ]
-
-
-
 
 
 \ TODO Investigate using `[` to drive the terminal (i.e. as part of `QUIT`), allowing `]` to execute immediately.

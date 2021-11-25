@@ -95,3 +95,5 @@
 :! MOVSB  $ A4 C, ;
 :! STOSB  $ AA C, ;
 :! STOSQ  REX.W, $ AB C, ;
+
+:! SYSCALLQ  $ 050F W, ;
