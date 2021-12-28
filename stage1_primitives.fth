@@ -97,8 +97,8 @@
 : CONTEXT@   DUP RAX RSI MOVQ  DUP RAX RDI MOVQ  DUP RAX RCX MOVQ ;
 : CONTEXT!   RCX RAX MOVQ DROP  RDI RAX MOVQ DROP  RSI RAX MOVQ DROP ;
 \ TODO Is there a better word than "context" for this?
-: 3>R  R> SWAP >R SWAP >R SWAP >R >R ;
-: 3R>  R> R> SWAP R> SWAP R> SWAP >R ;
+: 3>R  R>  SWAP >R SWAP >R SWAP >R  >R ;
+: 3R>  R>  R> SWAP R> SWAP R> SWAP  >R ;
 \ TODO ^ Refactor
 
 : MOVE  CONTEXT@ 3>R  CONTEXT!  REP MOVSB  3R> CONTEXT! ;
@@ -134,14 +134,15 @@
 : DODOES>  LATEST >XT THERE R> COMPILE THERE DROP ;
 :! DOES>  POSTPONE DODOES> POSTPONE R>  ;
 \ Since this is a compile-only Forth, CREATE and DOES> works a little differently.
-\ CREATE is not immediate, which means `CREATE _ ALLOT` won't work.
+\ CREATE is not immediate, which means e.g. `CREATE _ 8 CELLS ALLOT` won't work.
+\ Instead, the following definition can be used, e.g. `[ 8 CELLS ] ARRAY _ `
+:! ARRAY  CREATE ALLOT ;
 \ DOES> redefines the CREATEd word as immediate, giving the opportunity for some code generation.
 \ TODO Find workarounds for these differences. For DOES>, can probably place DOCOL after DOES>. What about CREATE?
 :! CONSTANT  CREATE , DOES> @ LITERAL ;
 [ $ 8 ] CONSTANT CELL
 :! VARIABLE  CREATE CELL ALLOT ;
 : CELLS  RAX [ $ 3 ] SHLQ$ ;
-
 
 \ TODO Investigate using `[` to drive the terminal (i.e. as part of `QUIT`), allowing `]` to execute immediately.
 \ TODO Figure out a good way to print '[ ' as a prompt (hinting that `]` does something).
