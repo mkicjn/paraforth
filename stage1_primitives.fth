@@ -148,8 +148,6 @@
 \ TODO Figure out a good way to print '[ ' as a prompt (hinting that `]` does something).
 \ TODO Add more error handling to `[`, namely printing unknown names with a question mark, skipping the line, and `QUIT`ting.
 
-\ TODO Rewrite `{` and `}` to not forcefully exit the word they're in.
-
 \ TODO Conditional compilation idea:
 \      : SKIPTIL  HERE NAME, BEGIN NAME COUNT OVER COUNT COMPARE UNTIL THERE DROP ;
 \      :! }}{{  SKIPTIL }} ;
