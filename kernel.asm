@@ -30,29 +30,21 @@ sys_exit:
 	mov	eax, 60
 	syscall
 
-byte_buf:
-	rb 1
-sys_rx:
-	PUSHA rcx, rdx, rsi, rdi, r11 ;{
-	xor	eax, eax	; syscall no.	(sys_read)
-	xor	edi, edi	; fd		(stdin)
-	mov	edx, 1		; count		(1)
-	lea	rsi, [byte_buf]	; buf		(byte_buf)
-	syscall
-	movzx	eax, byte [byte_buf]
-	POPA rcx, rdx, rsi, rdi, r11 ;}
-	ret
 sys_tx:
-	PUSHA rcx, rdx, rsi, rdi, r11 ;{
-	lea	rsi, [byte_buf]	; buf		(same buffer as before)
-	mov	[rsi], al
-	mov	eax, 1		; syscall no.	(sys_write)
-	mov	edi, 1		; fd		(stdout)
-	mov	edx, 1		; count		(1)
+	mov	[sys_xcv.mov+1], al
+	mov	eax, 1
+	jmp	sys_xcv
+sys_rx:
+	xor	eax, eax
+sys_xcv:
+	PUSHA rdi, rsi, rdx, rcx, r11
+	mov	edi, eax
+	lea	rsi, [sys_xcv.mov+1]
+	mov	edx, 1
 	syscall
-	POPA rcx, rdx, rsi, rdi, r11 ;}
+	POPA rdi, rsi, rdx, rcx, r11
+.mov:	mov	al, 127 ; self-modifying
 	ret
-
 
 ;		Dictionary Structure
 ;
