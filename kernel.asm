@@ -8,8 +8,8 @@ entry start
 ; rbx = scratch
 ; rcx = loop counter (preserved!)
 ; rdx = cached next-on-stack
-; rbp = return stack
-; rsp = data stack
+; rbp = data stack
+; rsp = return stack
 ; rsi = latest link (see "Dictionary Structure")
 ; rdi = compile area
 
