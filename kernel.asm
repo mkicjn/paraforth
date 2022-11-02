@@ -71,11 +71,7 @@ latest = end_link
 macro link str {
 local next
 next:
-	if latest = 0
-		dw 0
-	else
-		dw $ - latest
-	end if
+	dw $ - latest
 	latest = next
 	counted str
 	wordlist equ wordlist, '  ', str, 10
