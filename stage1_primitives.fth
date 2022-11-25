@@ -125,7 +125,7 @@
            DUP IF NIP ELSE DROP THEN  3R> CONTEXT! ;
 
 : LATEST  DUP  RAX RSI MOVQ ;
-: >NAME  $ 2 + ; \ Skip 16 bit offset
+: >NAME  $ 8 + ; \ Skip 8 byte pointer
 : >XT  >NAME COUNT + ; \ Skip length of string
 : >BODY  >XT $ 5 + ; \ Skip length of call instruction
 

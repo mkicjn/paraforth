@@ -82,7 +82,7 @@ start:
 ;			Dictionary Structure
 ;
 ; The dictionary is a series of links placed before their corresponding code.
-; Each link is just an offset to the previous link and a counted string.
+; Each link is just a pointer to the previous link and a counted string.
 
 ; TODO: Experiment with more dictionary types
 
@@ -96,15 +96,12 @@ b:
 
 wordlist equ 10 ; Only used to print list of words at assembly-time
 
-end_link:
-	dw 0
-
-latest = end_link
+latest = 0
 
 macro link str {
 local next
 next:
-	dw $ - latest
+	dq latest
 	latest = next
 	counted str
 	wordlist equ wordlist, '  ', str, 10
@@ -341,28 +338,25 @@ find:	; rax: counted string
 	; rsi: latest link
 	; rax = xt or null
 	; rbx clobbered
-	mov	rbx, rax
-	PUSHA rcx, rdi, rsi ;{
-	; test offset
-.loop:	movzx	eax, word [rsi]
-	test	eax, eax
-	jz	.fail
-	; prepare next link
-	mov	rdi, rsi
-	sub	rdi, rax
-	push	rdi ;{
-	; compare strings
-	mov	rdi, rbx
-	lea	rsi, [rsi+2]
-	movzx	ecx, byte [rsi]
+	PUSHA	rcx, rdi, rsi
+	; load search string length
+	movzx	ecx, byte [rax]
 	inc	ecx
-	rep	cmpsb
-	pop	rdi ;}
-	je	.succ
-	mov	rsi, rdi
+.loop:	test	rsi, rsi
+	jz	.done
+	; save next link
+	mov	rbx, [rsi]
+	; compare strings
+	mov	rdi, rax
+	lea	rsi, [rsi+8]
+	push	rcx ; {
+	repe cmpsb
+	pop	rcx ; }
+	je	.done
+	mov	rsi, rbx
 	jmp	.loop
-.succ:	mov	rax, rsi
-.fail:	POPA rcx, rdi, rsi ;}
+.done:	mov	rax, rsi
+	POPA	rcx, rdi, rsi
 	ret
 
 ; Only an immediate defining word is provided.
@@ -371,11 +365,12 @@ find:	; rax: counted string
 link ':!'
 	; immediate
 def_:	push	rax ;{
-	mov	rax, rdi
-	sub	rax, rsi
+	; store pointer to latest link
+	mov	rax, rsi
 	mov	rsi, rdi
-	stosw
+	stosq
 	pop	rax ;}
+	; store next name from input
 	jmp	name_
 
 
