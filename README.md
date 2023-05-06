@@ -19,7 +19,7 @@ _(This project is a very slow work in progress and has seen a long pause in deve
   * Mostly pure at the moment for simplicity, but with support for inlining in the future
 * x86-64 assembler
   * No performance compromises due to lack of primitives
-* Working ELF executable generator (but no metacompiled version yet)
+* Basic ELF executable generator demo (but no metacompiled version yet)
 
 Before this project was rewritten, an extensive set of design notes existed in the source code comments.
 The current revision is somewhat deficient in this regard, and should be improved in the future.

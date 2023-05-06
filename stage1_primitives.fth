@@ -11,7 +11,7 @@
 :! UNTIL  POSTPONE COND POSTPONE JZ$ ;
 
 : =  RBX DUPXORQ  RDX RAX CMPQ  RBX SETNZB  RBX DECQ  RAX RBX MOVQ  NIP ;
-:! \  BEGIN  RX $ A =  UNTIL ;
+:! \  BEGIN  KEY $ A =  UNTIL ;
 
 \ Comments are now enabled!
 
@@ -45,7 +45,7 @@
 
 \ Parenthesis comments
 :! CHAR  NAME 1+ C@ LITERAL ;
-:! (  BEGIN RX CHAR ) = UNTIL ;
+:! (  BEGIN KEY CHAR ) = UNTIL ;
 
 \ Data pointer manipulation
 : THERE  RDI RAXXCHGQ  ;
@@ -69,10 +69,10 @@
 
 \ Word manipulation
 : COUNT  1+ DUP 1- C@ ;
-: TYPE  FOR DUP C@ TX 1+ NEXT DROP ;
+: TYPE  FOR DUP C@ EMIT 1+ NEXT DROP ;
 
 \ Character constants
-: CR  $ A TX ;
+: CR  $ A EMIT ;
 :! BL  $ 20 LITERAL ;
 
 \ "Interpreter"
@@ -81,7 +81,7 @@
 \ This compiler doesn't have an "interpreter" mode, so instead, I create a new compiler loop called `[` which is allowed to call itself,
 \ and supplement that with a corresponding word `]` that exits the running compiler and immediately runs the compiled code.
 \ Using `[` and `]`, one can simply compile and run arbitrary code at compile time, circumventing the need for a proper interpreter.
-: NOT-FOUND  COUNT TYPE CHAR ? TX CR POSTPONE \
+: NOT-FOUND  COUNT TYPE CHAR ? EMIT CR POSTPONE \
 \ ^ TODO Consider replacing POSTPONE \ with QUIT
 :! [  RDI PUSHQ  BEGIN  NAME DUP FIND  DUP
                  IF  NIP EXECUTE
@@ -98,7 +98,7 @@
 
 [
 \ TODO ^ Maybe this should be replaced by QUIT later.
-\ : QUIT  BEGIN CHAR [ TX BL TX POSTPONE [ AGAIN ;
+\ : QUIT  BEGIN CHAR [ EMIT BL EMIT POSTPONE [ AGAIN ;
 \ ^ This definition almost works, but needs to reset registers
 \ Another problem: These definitions would rely on each other.
 
@@ -125,12 +125,12 @@
 
 \ Unsigned decimal integer I/O
 :! #  $ 0 NAME COUNT  FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP LITERAL ;
-: .#  $ 0  BEGIN >R  # 10 UM/MOD  R> 1+  OVER 0= UNTIL  NIP  FOR  CHAR 0 + TX  NEXT ;
+: .#  $ 0  BEGIN >R  # 10 UM/MOD  R> 1+  OVER 0= UNTIL  NIP  FOR  CHAR 0 + EMIT  NEXT ;
 \ TODO Add signed decimal I/O
 
 \ Strings
-: PARSE,  RX BEGIN 2DUP <> WHILE C, RX REPEAT 2DROP ;
-: PARSE  HERE SWAP PARSE, DUP THERE OVER - ;
+: PARSE,  ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
+: PARSE  ( delim -- str cnt ) HERE SWAP PARSE, DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
 :! S"  POSTPONE AHEAD  HERE CHAR " PARSE,  HERE OVER -  ROT POSTPONE THEN  2LITERAL ;
 \ TODO Check stack depth after definitions to ensure correctness.
 \ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.

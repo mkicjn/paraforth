@@ -121,7 +121,7 @@ next:
 ;
 ; Combined, this has the effect of "postponing" the rest of the word following the call to DOCOL.
 
-link 'DOCOL'
+link "DOCOL"
 	call	docol
 docol: ; ^ Self-application
 	pop	rbx
@@ -133,7 +133,7 @@ docol: ; ^ Self-application
 
 ; `DOLIT` is simpler. It compiles a call to `DUP` and compiles `movabs rax`, to be followed by a quadword.
 
-link 'DOLIT'
+link "DOLIT"
 	call	docol
 dolit:	call	postpone_dup_
 	mov	word [rdi], 0xb848
@@ -142,7 +142,7 @@ dolit:	call	postpone_dup_
 
 ; Semicolon (`;`) is the simplest. All it does is immediately emit `ret`.
 
-link ';'
+link ";"
 	; immediate
 exit_:	mov	byte [rdi], 0xc3
 	inc	rdi
@@ -159,23 +159,23 @@ exit_:	mov	byte [rdi], 0xc3
 
 ; System interface primitives:
 
-link 'BYE'
+link "BYE"
 	call	docol
 bye:	jmp	sys_exit
 
-link 'RX'
+link "KEY"
 	call	docol
-rx:	call	dup_
+key:	call	dup_
 	jmp	sys_rx
 
-link 'TX'
+link "EMIT"
 	call	docol
-tx:	call	sys_tx
+emit:	call	sys_tx
 	jmp	drop_
 
 ; Stack primitives:
 
-link 'DUP'
+link "DUP"
 postpone_dup_:
 	call	docol
 dup_:
@@ -183,14 +183,14 @@ dup_:
 	mov	rdx, rax
 	ret
 
-link 'DROP'
+link "DROP"
 	call	docol
 drop_:
 	mov	rax, rdx
 	DPOP	rdx
 	ret
 
-link 'SWAP'
+link "SWAP"
 	call	docol
 swap_:
 	xchg	rax, rdx
@@ -199,19 +199,19 @@ swap_:
 
 ; Arithmetic primitives:
 
-link '+'
+link "+"
 	call	docol
 add_:
 	add	rax, rdx
 	DPOP	rdx
 	ret
-link '-'
+link "-"
 	call	docol
 sub_:
 	sub	rdx, rax
 	jmp	drop_
 
-link 'LSHIFT'
+link "LSHIFT"
 	call	docol
 lshift:
 	mov	rbx, rcx
@@ -220,7 +220,7 @@ lshift:
 	mov	rcx, rbx
 	jmp	drop_
 
-link 'RSHIFT'
+link "RSHIFT"
 	call	docol
 rshift:
 	mov	rbx, rcx
@@ -231,7 +231,7 @@ rshift:
 
 ; Memory primitive:
 
-link 'C,'
+link "C,"
 	call	docol
 c_:
 	stosb
@@ -246,7 +246,7 @@ c_:
 ; `NAME,` parses a word from input and compiles its counted string literally.
 ; In case the trailing space character is significant, it is stored at the data space pointer (without increment).
 
-link 'NAME,'
+link "NAME,"
 	call	docol
 name_:	; rdi: compilation area
 	; rdi += length of counted string for input
@@ -275,7 +275,7 @@ name_:	; rdi: compilation area
 ;
 ; This represents another deviation from a typical Forth in that we avoid using a word buffer.
 
-link 'NAME'
+link "NAME"
 	call	docol
 name:	call	dup_
 	mov	rax, rdi
@@ -286,7 +286,7 @@ name:	call	dup_
 ; `DIGIT` converts a single digit character into its numeric value.
 ; All invalid characters ([^0-9a-zA-Z]) result in a digit value >35.
 
-link 'DIGIT'
+link "DIGIT"
 	call	docol
 digit:	; al: digit ASCII character [0-9A-Za-z]
 	; rax = digit value (bases 2-36)
@@ -308,7 +308,7 @@ digit:	; al: digit ASCII character [0-9A-Za-z]
 ;
 ; Only hexadecimal input is provided, since it's far more useful than decimal for an assembler.
 
-link '$'
+link "$"
 	; immediate
 hex:	call	name
 	PUSHA rcx, rdx, rsi ;{
@@ -332,7 +332,7 @@ hex:	call	name
 ;
 ; These words facilitate dictionary lookups and the creation of new definitions.
 
-link 'FIND'
+link "FIND"
 	call	docol
 find:	; rax: counted string
 	; rsi: latest link
@@ -362,7 +362,7 @@ find:	; rax: counted string
 ; Only an immediate defining word is provided.
 ; Invoking DOCOL manually is good enough until a proper `:` is defined.
 
-link ':!'
+link ":!"
 	; immediate
 def_:	push	rax ;{
 	; store pointer to latest link
