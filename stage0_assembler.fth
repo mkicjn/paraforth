@@ -67,12 +67,17 @@
 :! CLSHLQ  REX.W, $ D3 C, $ 6 $ 3 MODR/M, ;
 :! CLSARQ  REX.W, $ D3 C, $ 7 $ 3 MODR/M, ;
 
-:! CMPQ   REX.W, $ 39 C, $ 3 MODR/M, ;
+:! CMPQ   SWAP REX.W, $ 39 C, $ 3 MODR/M, ;
 :! TESTQ  REX.W, $ 85 C, $ 3 MODR/M, ;
 
 :! SETZB   $ 940F W, $ 0 $ 3 MODR/M, ;
+:! SETEB   $ 940F W, $ 0 $ 3 MODR/M, ;
 :! SETNZB  $ 950F W, $ 0 $ 3 MODR/M, ;
+:! SETNEB  $ 950F W, $ 0 $ 3 MODR/M, ;
 :! SETLB   $ 9C0F W, $ 0 $ 3 MODR/M, ;
+:! SETGEB  $ 9D0F W, $ 0 $ 3 MODR/M, ;
+:! SETLEB  $ 9E0F W, $ 0 $ 3 MODR/M, ;
+:! SETGB   $ 9F0F W, $ 0 $ 3 MODR/M, ;
 
 :! CMOVAQ  REX.W, $ 470F W, $ 3 MODR/M, ;
 :! CMOVBQ  REX.W, $ 420F W, $ 3 MODR/M, ;
