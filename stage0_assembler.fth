@@ -33,6 +33,7 @@
 
 :! MOVB!  $ 88 C, $ 0 MODR/M, ;
 :! MOVZXB@  REX.W, $ B60F W, SWAP $ 0 MODR/M, ;
+:! MOVZXBL  $ B60F W, $ 3 MODR/M, ;
 
 :! RAXXCHGQ  REX.W, $ 90 + C, ;
 
@@ -50,7 +51,6 @@
 :! PUSHQ  $ 50 + C, ;
 :! POPQ   $ 58 + C, ;
 
-:! DUPXORQ  DUP $ 31 C, $ 3 MODR/M, ;
 :! ANDQ  REX.W, $ 21 C, $ 3 MODR/M, ;
 :!  ORQ  REX.W, $ 09 C, $ 3 MODR/M, ;
 :! XORQ  REX.W, $ 31 C, $ 3 MODR/M, ;

@@ -4,53 +4,92 @@
 :! DPOPQ  POSTPONE RBPMOVQ@  POSTPONE RBP $ 8 POSTPONE ADDQ$ ;
 :! DPUSHQ  POSTPONE RBP $ 8 POSTPONE SUBQ$  POSTPONE RBPMOVQ! ;
 
-: NIP  RDX DPOPQ ;
-
 : COND  RBX RAX MOVQ  DROP  RBX RBX TESTQ ;
 :! BEGIN  HERE ;
 :! UNTIL  POSTPONE COND POSTPONE JZ$ ;
 
-: =  RBX DUPXORQ  RAX RDX CMPQ  RBX SETNZB  RBX DECQ  RAX RBX MOVQ  NIP ;
+: =  RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  RDX DPOPQ ;
 :! \  BEGIN  KEY $ A =  UNTIL ;
-
 \ Comments are now enabled!
 
-\ Stack manipulation
-: TUCK  RAX DPUSHQ ;
-: OVER  SWAP TUCK ;
-: ROT  RBX DPOPQ  DUP  RAX RBX MOVQ ;
-: -ROT  RBX RAX MOVQ  DROP  RBX DPUSHQ ;
-: 2DUP  RDX DPUSHQ  RAX DPUSHQ ;
-: 2DROP  RAX DPOPQ  RDX DPOPQ ;
-
-\ Pointer manipulation
-: @  RAX RAX MOVQ@ ;
-: !  RAX RDX MOVQ! 2DROP ;
-: C@  RAX RAX MOVZXB@ ;
-: C!  RAX RDX MOVB!  2DROP ;
-
-\ Literal compilation
+\ Inlining as postponement of each word
 : LITERAL  DOLIT , ;
-: 2LITERAL  SWAP LITERAL LITERAL ;
+:! '  NAME FIND LITERAL ;
+:! }  ; \ no-op
+:! {  BEGIN  NAME FIND DUP COMPILE  ' } =  UNTIL ;
+
+\ Stack manipulation
+\ (Some are redefined to allow for inlining)
+:! DUP  { RDX DPUSHQ  RDX RAX MOVQ } ;
+:! DROP  { RAX RDX MOVQ  RDX DPOPQ } ;
+:! SWAP  { RDX RAXXCHGQ } ;
+:! NIP  { RDX DPOPQ } ;
+:! TUCK  { RAX DPUSHQ } ;
+:! OVER  { SWAP TUCK } ;
+:! ROT  { RBX DPOPQ  DUP  RAX RBX MOVQ } ;
+:! -ROT  { RBX RAX MOVQ  DROP  RBX DPUSHQ } ;
+:! 2DUP  { RDX DPUSHQ  RAX DPUSHQ } ;
+:! 2DROP  { RAX DPOPQ  RDX DPOPQ } ;
+
+\ Memory operations
+:! @  { RAX RAX MOVQ@ } ;
+:! !  { RAX RDX MOVQ!  2DROP } ;
+:! C@  { RAX RAX MOVZXB@ } ;
+:! C!  { RAX RDX MOVB!  2DROP } ;
+:! ,   { STOSQ  DROP } ;
+:! C,  { STOSB  DROP } ;
 
 \ Basic arithmetic
-: 1+  RAX INCQ ;
-: 1-  RAX DECQ ;
-: 2*  RAX 1SHLQ ;
-: 2/  RAX 1SARQ ;
-: *  RDX MULQ  NIP ;
-: UM/MOD  RBX RAX MOVQ  RAX RDX MOVQ  RDX DUPXORQ  RBX DIVQ ;
-:! INVERT  POSTPONE RAX POSTPONE NOTQ ;
-:! NEGATE  POSTPONE RAX POSTPONE NEGQ ;
+\ (Some are redefined to allow for inlining)
+:! +  { RAX RDX ADDQ  NIP } ;
+:! -  { RDX RAX SUBQ  DROP } ;
+:! 1+  { RAX INCQ } ;
+:! 1-  { RAX DECQ } ;
+:! 2*  { RAX 1SHLQ } ;
+:! 2/  { RAX 1SARQ } ;
+:! INVERT  { RAX NOTQ } ;
+:! NEGATE  { RAX NEGQ } ;
+:! *  { RDX MULQ  NIP } ;
+:! UM/MOD  { RBX RAX MOVQ  RAX RDX MOVQ  RDX RDX XORQ  RBX DIVQ } ;
+:! LSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHLQ  RCX POPQ  DROP } ;
+:! RSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHRQ  RCX POPQ  DROP } ;
+
+\ Comparisons
+\ (Some are redefined to allow for inlining)
+:! 0=  { RAX RAX TESTQ  RAX SETZB  RAX RAX MOVZXBL } ;
+:! 0<>  { RAX RAX TESTQ  RAX SETNZB  RAX RAX MOVZXBL } ;
+:! 0<  { RAX RAX TESTQ  RAX SETLB  RAX RAX MOVZXBL } ;
+:! 0>  { RAX RAX TESTQ  RAX SETGB  RAX RAX MOVZXBL } ;
+:! 0<=  { RAX RAX TESTQ  RAX SETLEB  RAX RAX MOVZXBL } ;
+:! 0>=  { RAX RAX TESTQ  RAX SETGEB  RAX RAX MOVZXBL } ;
+:! =  { RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  NIP } ;
+:! <>  { RAX RDX CMPQ  RAX SETNEB  RAX RAX MOVZXBL  NIP } ;
+:! <  { RAX RDX CMPQ  RAX SETLB  RAX RAX MOVZXBL  NIP } ;
+:! >  { RAX RDX CMPQ  RAX SETGB  RAX RAX MOVZXBL  NIP } ;
+:! <=  { RAX RDX CMPQ  RAX SETLEB  RAX RAX MOVZXBL  NIP } ;
+:! >=  { RAX RDX CMPQ  RAX SETGEB  RAX RAX MOVZXBL  NIP } ;
+:! MIN  { RAX RDX CMPQ  RAX RDX CMOVLQ  NIP } ;
+:! MAX  { RAX RDX CMPQ  RAX RDX CMOVGQ  NIP } ;
+
+\ Data pointer manipulation
+:! HERE  { DUP  RAX RDI MOVQ } ;
+:! THERE  { RDI RAXXCHGQ } ;
+:! ALLOT  { RDI RAX ADDQ  DROP } ;
+:! 1ALLOT  { RDI INCQ } ;
+
+\ TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+
+\ Continue going through and moving improved versions of below stuff up above.
+\ Two main directives:
+\ * Move the complex stuff in this file (string operations, REPL-like functionality) elsewhere
+\ * Focus on inlining as many primitives as possible (and merely implement the rest)
+\ Goal here is to have a stable (but not sophisticated) platform on which to build
+
+\ TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 
 \ Parenthesis comments
 :! CHAR  NAME 1+ C@ LITERAL ;
 :! (  BEGIN KEY CHAR ) = UNTIL ;
-
-\ Data pointer manipulation
-: THERE  RDI RAXXCHGQ  ;
-: ALLOT  RDI RAX ADDQ  DROP ;
-: 1ALLOT  RDI INCQ ;
 
 \ Control structures
 :! AHEAD  HERE 1+  HERE POSTPONE JMP$ ;
@@ -102,13 +141,6 @@
 \ ^ This definition almost works, but needs to reset registers
 \ Another problem: These definitions would rely on each other.
 
-\ Comparison words
-: 0<  RAX [ $ 3F ] SARQ$ ;
-: 0=  RBX DUPXORQ  RAX RAX TESTQ  RBX SETNZB  RBX DECQ  RAX RBX MOVQ ;
-: <>  RBX DUPXORQ  RAX RDX CMPQ  RBX SETZB  RBX DECQ  RAX RBX MOVQ  NIP ;
-: MIN  RDX RAX CMPQ  RAX RDX CMOVLQ  DROP ;
-: MAX  RDX RAX CMPQ  RAX RDX CMOVGQ  DROP ;
-
 \ Return stack manipulation
 : >R  RBX POPQ  RAX PUSHQ  RBX PUSHQ  DROP ;
 : R>  DUP  RBX POPQ  RAX POPQ  RBX PUSHQ ;
@@ -131,6 +163,7 @@
 \ Strings
 : PARSE,  ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
 : PARSE  ( delim -- str cnt ) HERE SWAP PARSE, DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
+: 2LITERAL  SWAP LITERAL LITERAL ;
 :! S"  POSTPONE AHEAD  HERE CHAR " PARSE,  HERE OVER -  ROT POSTPONE THEN  2LITERAL ;
 \ TODO Check stack depth after definitions to ensure correctness.
 \ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.
@@ -139,7 +172,7 @@
 \ Memory comparison
 : SIGN  DUP IF  0< ( -1|0 ) 1+ ( 0|1 ) 2* ( 0|2 ) 1- ( -1|1 ) THEN ;
 : COMPARE  CONTEXT@ 3>R  ROT SWAP  2DUP - SIGN >R  MIN  CONTEXT!
-           R> DUP  RAX DUPXORQ  RBX DUPXORQ  REP CMPSB
+           R> DUP  RAX RAX XORQ  RBX RBX XORQ  REP CMPSB
            RAX SETNZB  RBX SETLB  RBX NEGQ  RAX RBX ORQ
            DUP IF NIP ELSE DROP THEN  3R> CONTEXT! ;
 
