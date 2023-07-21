@@ -10,16 +10,35 @@
 
 : =  RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  RDX DPOPQ ;
 :! \  BEGIN  KEY $ A =  UNTIL ;
-\ Comments are now enabled!
 
-\ Inlining as postponement of each word
+\ Now that comments are supported, documentation for the high-level stuff can begin.
+
+\ The main thing to point out before now is that there's a bit of a chicken-and-egg problem betwene COMPILE, POSTPONE, and CALLQ$.
+\ I chose to solve this by implementing COMPILE as a regular colon word, which implements a sort of "generalized DOCOL."
+\ Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
+
+\ The word HERE is another interesting case, since it appears to be necessary to compile relative offsets.
+\ Somehow, though, it actually seems more likely that it can be avoided.
+
+\ DPOPQ and DPUSHQ are sort of pseudo-instructions, and the definitions of BEGIN and UNTIL are just temporary (but necessary) infrastructure.
+
+\ The first immediately useful thing to implement is primitive inlining, so it affects as much code as possible.
+\ Since there aren't that many primitives to begin with, this works out nicely.
+
+\ Inlining can be implemented easily enough by creating a parsing word that postpones every word entered after it until it hits an "end" word.
 : LITERAL  DOLIT , ;
 :! '  NAME FIND LITERAL ;
-:! }  ; \ no-op
-:! {  BEGIN  NAME FIND DUP COMPILE  ' } =  UNTIL ;
+:! }  ; \ just a no-op to compare against
+:! {  BEGIN  NAME FIND DUP COMPILE  ' } =  UNTIL ; \ Since we don't have WHILE and REPEAT, } gets postponed too - good thing it's a no-op.
+
+\ This makes it act as though the user typed all those words directly into their definition, since words always get executed immediately when typed.
+\ However, it won't work at all with words that parse input, because there's no way to save the input for later.
+
+\ Implementing the actual primitives is pretty straightforward and unexciting.
+\ See the notes in kernel.asm to understand the register convention.
+\ (Note that some operations are redefined to allow for a more optimized inlining implementation)
 
 \ Stack manipulation
-\ (Some are redefined to allow for inlining)
 :! DUP  { RDX DPUSHQ  RDX RAX MOVQ } ;
 :! DROP  { RAX RDX MOVQ  RDX DPOPQ } ;
 :! SWAP  { RDX RAXXCHGQ } ;
@@ -40,7 +59,6 @@
 :! C,  { STOSB  DROP } ;
 
 \ Basic arithmetic
-\ (Some are redefined to allow for inlining)
 :! +  { RAX RDX ADDQ  NIP } ;
 :! -  { RDX RAX SUBQ  DROP } ;
 :! 1+  { RAX INCQ } ;
@@ -55,7 +73,7 @@
 :! RSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHRQ  RCX POPQ  DROP } ;
 
 \ Comparisons
-\ (Some are redefined to allow for inlining)
+\ The repeated MOVZXBLs are ugly, but it's easier than clearing RBX
 :! 0=  { RAX RAX TESTQ  RAX SETZB  RAX RAX MOVZXBL } ;
 :! 0<>  { RAX RAX TESTQ  RAX SETNZB  RAX RAX MOVZXBL } ;
 :! 0<  { RAX RAX TESTQ  RAX SETLB  RAX RAX MOVZXBL } ;
@@ -73,7 +91,7 @@
 
 \ Data pointer manipulation
 :! HERE  { DUP  RAX RDI MOVQ } ;
-:! THERE  { RDI RAXXCHGQ } ;
+:! THERE  { RDI RAXXCHGQ } ; \ Useful for temporarily setting/resetting the data pointer
 :! ALLOT  { RDI RAX ADDQ  DROP } ;
 :! 1ALLOT  { RDI INCQ } ;
 
@@ -81,9 +99,10 @@
 
 \ Continue going through and moving improved versions of below stuff up above.
 \ Two main directives:
-\ * Move the complex stuff in this file (string operations, REPL-like functionality) elsewhere
-\ * Focus on inlining as many primitives as possible (and merely implement the rest)
-\ Goal here is to have a stable (but not sophisticated) platform on which to build
+\ * Move/remove the complex stuff in this file (string operations, REPL-like functionality)
+\ * Focus on inlining as many primitives as possible (and implement the rest normally)
+\ Goal here is now to have a stable (but not sophisticated) platform on which to build
+\ The sophisticated bits can and should come later.
 
 \ TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 
