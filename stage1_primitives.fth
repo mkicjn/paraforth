@@ -13,7 +13,7 @@
 
 \ Now that comments are supported, documentation for the high-level stuff can begin.
 
-\ The main thing to point out before now is that there's a bit of a chicken-and-egg problem betwene COMPILE, POSTPONE, and CALLQ$.
+\ The main thing to point out before now is that there's a bit of a chicken-and-egg problem between COMPILE, POSTPONE, and CALLQ$.
 \ I chose to solve this by implementing COMPILE as a regular colon word, which implements a sort of "generalized DOCOL."
 \ Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
 
@@ -65,12 +65,17 @@
 :! 1-  { RAX DECQ } ;
 :! 2*  { RAX 1SHLQ } ;
 :! 2/  { RAX 1SARQ } ;
-:! INVERT  { RAX NOTQ } ;
 :! NEGATE  { RAX NEGQ } ;
 :! *  { RDX MULQ  NIP } ;
 :! UM/MOD  { RBX RAX MOVQ  RAX RDX MOVQ  RDX RDX XORQ  RBX DIVQ } ;
 :! LSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHLQ  RCX POPQ  DROP } ;
 :! RSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHRQ  RCX POPQ  DROP } ;
+
+\ Bitwise arithmetic
+:! INVERT  { RAX NOTQ } ;
+:! AND  { RAX RDX ANDQ  NIP } ;
+:! OR  { RAX RDX ORQ  NIP } ;
+:! XOR  { RAX RDX XORQ  NIP } ;
 
 \ Comparisons
 \ The repeated MOVZXBLs are ugly, but it's easier than clearing RBX
@@ -93,7 +98,35 @@
 :! HERE  { DUP  RAX RDI MOVQ } ;
 :! THERE  { RDI RAXXCHGQ } ; \ Useful for temporarily setting/resetting the data pointer
 :! ALLOT  { RDI RAX ADDQ  DROP } ;
-:! 1ALLOT  { RDI INCQ } ;
+
+\ Control structures
+\ Note: Control structures only support 256 byte bodies due to rel8 encoding
+: COND  { RBX RAX MOVQ  DROP  RBX RBX TESTQ } ; \ Compile code that sets flags based on top stack item
+:! BEGIN  HERE ; \ Leave a back reference on the stack
+:! AGAIN        { JMPQ$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
+:! UNTIL  COND  { JZQ$ } ; \ Resolve a back reference on the stack with a conditional jump
+:! AHEAD        HERE 1+ 1+  HERE { JMPQ$ } ; \ Leave a forward reference on the stack
+:! IF     COND  HERE 1+ 1+  HERE { JZQ$ } ;  \ Leave a conditional forward reference on the stack
+\ ^^ Note: AHEAD and IF can both cause infinite loops if not terminated - need to check for same stack depth when compiling later
+:! THEN  THERE  DUP REL32,  THERE DROP ; \ Resolve a forward reference (fill in a forward jump)
+:! ELSE  POSTPONE AHEAD  SWAP  POSTPONE THEN ; \ Leave a forward reference, then resolve an existing one
+:! WHILE  POSTPONE IF  SWAP ; \ Leave a forward reference on the stack under an existing (back) reference
+:! REPEAT  POSTPONE AGAIN  POSTPONE THEN ; \ Resolve a back reference, then resolve a forward reference
+
+\ Definite loops
+\ Note: Control structures only support 256 byte bodies due to rel8 encoding
+:! FOR  { RCX PUSHQ  RCX RAX MOVQ  DROP } HERE ;
+:! NEXT  { LOOP$  RCX POPQ } ;
+:! AFT  DROP  POSTPONE AHEAD  POSTPONE BEGIN  SWAP ;
+:! I  { DUP  RAX RCX MOVQ } ;
+
+:! CHAR  NAME 1+ C@ LITERAL ;
+:! !" BEGIN KEY DUP CHAR " <> WHILE EMIT REPEAT DROP $ A EMIT ;
+!" Currently debugging an issue - will return later"
+
+:! TEST  $ ff BEGIN  DUP $ 10 > WHILE  DUP $ 1 AND 0= IF  DUP EMIT  ELSE $ 4D EMIT THEN REPEAT DROP ;
+TEST
+
 
 \ TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 
@@ -109,21 +142,6 @@
 \ Parenthesis comments
 :! CHAR  NAME 1+ C@ LITERAL ;
 :! (  BEGIN KEY CHAR ) = UNTIL ;
-
-\ Control structures
-:! AHEAD  HERE 1+  HERE POSTPONE JMP$ ;
-:! IF  POSTPONE COND  HERE 1+  HERE POSTPONE JZ$ ;
-:! AGAIN  POSTPONE JMP$ ;
-:! THEN  THERE  DUP REL8,  THERE DROP ;
-:! ELSE  POSTPONE AHEAD  SWAP  POSTPONE THEN ;
-:! WHILE  POSTPONE IF  SWAP ;
-:! REPEAT  POSTPONE AGAIN  POSTPONE THEN ;
-: STARTFOR  RBX POPQ  RCX PUSHQ  RBX PUSHQ  RCX RAX MOVQ  DROP ;
-: ENDFOR  RBX POPQ  RCX POPQ  RBX PUSHQ ;
-:! FOR  POSTPONE STARTFOR HERE ;
-:! AFT  DROP POSTPONE AHEAD POSTPONE BEGIN SWAP ;
-:! NEXT  POSTPONE LOOP$ POSTPONE ENDFOR ;
-: I  DUP  RAX RCX MOVQ ;
 
 \ Word manipulation
 : COUNT  1+ DUP 1- C@ ;
