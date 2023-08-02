@@ -84,15 +84,14 @@
 :! CMOVGQ  REX.W, $ 4F0F W, $ 3 MODR/M, ;
 :! CMOVLQ  REX.W, $ 4C0F W, $ 3 MODR/M, ;
 
+:! JMP   $ FF C, $ 4 $ 3 MODR/M, ;
 :! JMP$  $ EB C, REL8, ;
-:! LOOP$  $ E2 C, REL8, ;
 :! JZ$   $ 74 C, REL8, ;
 :! JNZ$   $ 75 C, REL8, ;
-
-:! JMP   $ FF C, $ 4 $ 3 MODR/M, ;
-:! JMPQ$  $ E9 C, REL32, ;
-:! JZQ$   $ 840F W, REL32, ;
-:! JNZQ$  $ 850F W, REL32, ;
+:! LOOP$  $ E2 C, REL8, ;
+:! JMPL$  $ E9 C, REL32, ;
+:! JZL$   $ 840F W, REL32, ;
+:! JNZL$  $ 850F W, REL32, ;
 
 :! REP    $ F3 C, ;
 :! REPE   $ F3 C, ;

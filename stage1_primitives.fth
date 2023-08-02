@@ -100,13 +100,12 @@
 :! ALLOT  { RDI RAX ADDQ  DROP } ;
 
 \ Control structures
-\ Note: Control structures only support 256 byte bodies due to rel8 encoding
 : COND  { RBX RAX MOVQ  DROP  RBX RBX TESTQ } ; \ Compile code that sets flags based on top stack item
 :! BEGIN  HERE ; \ Leave a back reference on the stack
-:! AGAIN        { JMPQ$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
-:! UNTIL  COND  { JZQ$ } ; \ Resolve a back reference on the stack with a conditional jump
-:! AHEAD        HERE 1+ 1+  HERE { JMPQ$ } ; \ Leave a forward reference on the stack
-:! IF     COND  HERE 1+ 1+  HERE { JZQ$ } ;  \ Leave a conditional forward reference on the stack
+:! AGAIN        { JMPL$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
+:! UNTIL  COND  { JZL$ } ;  \ Resolve a back reference on the stack with a conditional jump
+:! AHEAD        HERE 1+     HERE { JMPL$ } ; \ Leave a forward reference on the stack
+:! IF     COND  HERE 1+ 1+  HERE { JZL$ } ;  \ Leave a conditional forward reference on the stack
 \ ^^ Note: AHEAD and IF can both cause infinite loops if not terminated - need to check for same stack depth when compiling later
 :! THEN  THERE  DUP REL32,  THERE DROP ; \ Resolve a forward reference (fill in a forward jump)
 :! ELSE  POSTPONE AHEAD  SWAP  POSTPONE THEN ; \ Leave a forward reference, then resolve an existing one
@@ -114,19 +113,12 @@
 :! REPEAT  POSTPONE AGAIN  POSTPONE THEN ; \ Resolve a back reference, then resolve a forward reference
 
 \ Definite loops
-\ Note: Control structures only support 256 byte bodies due to rel8 encoding
+\ Note: FOR..NEXT only supports 256 byte bodies due to rel8 encoding
 :! FOR  { RCX PUSHQ  RCX RAX MOVQ  DROP } HERE ;
 :! NEXT  { LOOP$  RCX POPQ } ;
 :! AFT  DROP  POSTPONE AHEAD  POSTPONE BEGIN  SWAP ;
 :! I  { DUP  RAX RCX MOVQ } ;
-
-:! CHAR  NAME 1+ C@ LITERAL ;
-:! !" BEGIN KEY DUP CHAR " <> WHILE EMIT REPEAT DROP $ A EMIT ;
-!" Currently debugging an issue - will return later"
-
-:! TEST  $ ff BEGIN  DUP $ 10 > WHILE  DUP $ 1 AND 0= IF  DUP EMIT  ELSE $ 4D EMIT THEN REPEAT DROP ;
-TEST
-
+\ TODO : DO, LOOP, +LOOP and LEAVE
 
 \ TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 
