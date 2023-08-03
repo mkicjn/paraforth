@@ -125,19 +125,21 @@ link "DOCOL"
 	call	docol
 docol: ; ^ Self-application
 	pop	rbx
-	mov	byte [rdi], 0xe8
+	mov	byte [rdi], 0xe8 ; call
 	lea	rdi, [rdi+5]
 	sub	rbx, rdi
-	mov	dword [rdi-4], ebx
+	mov	dword [rdi-4], ebx ; rel32
 	ret
 
-; `DOLIT` is simpler. It compiles a call to `DUP` and compiles `movabs rax`, to be followed by a quadword.
+; `DOLIT` is conceptually simpler but compiles much more code. It inlines `DUP` and compiles `movabs rax`, to be followed by a quadword.
 
 link "DOLIT"
 	call	docol
-dolit:	call	postpone_dup_
-	mov	word [rdi], 0xb848
-	lea	rdi, [rdi+2]
+dolit:	mov	dword [rdi],   0xf86d8d48 ; lea rbp, [rbp-8]
+	mov	dword [rdi+4], 0x00558948 ; mov [rbp], rdx
+	mov	dword [rdi+8], 0xc28948   ; mov rdx, rax
+	mov	word [rdi+11], 0xb848     ; movabs rdx
+	lea	rdi, [rdi+13]
 	ret
 
 ; Semicolon (`;`) is the simplest. All it does is immediately emit `ret`.
@@ -176,7 +178,6 @@ emit:	call	sys_tx
 ; Stack primitives:
 
 link "DUP"
-postpone_dup_:
 	call	docol
 dup_:
 	DPUSH	rdx
