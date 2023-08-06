@@ -79,10 +79,10 @@
 :! SETLEB  $ 9E0F W, $ 0 $ 3 MODR/M, ;
 :! SETGB   $ 9F0F W, $ 0 $ 3 MODR/M, ;
 
-:! CMOVAQ  REX.W, $ 470F W, $ 3 MODR/M, ;
-:! CMOVBQ  REX.W, $ 420F W, $ 3 MODR/M, ;
-:! CMOVGQ  REX.W, $ 4F0F W, $ 3 MODR/M, ;
-:! CMOVLQ  REX.W, $ 4C0F W, $ 3 MODR/M, ;
+:! CMOVAQ  SWAP REX.W, $ 470F W, $ 3 MODR/M, ;
+:! CMOVBQ  SWAP REX.W, $ 420F W, $ 3 MODR/M, ;
+:! CMOVGQ  SWAP REX.W, $ 4F0F W, $ 3 MODR/M, ;
+:! CMOVLQ  SWAP REX.W, $ 4C0F W, $ 3 MODR/M, ;
 
 :! JMP   $ FF C, $ 4 $ 3 MODR/M, ;
 :! JMP$  $ EB C, REL8, ;

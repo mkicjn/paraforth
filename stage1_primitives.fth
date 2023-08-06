@@ -1,14 +1,14 @@
 :! POSTPONE  NAME FIND COMPILE ;
 :! :  POSTPONE :! POSTPONE DOCOL ;
 
-:! DPOPQ  POSTPONE RBPMOVQ@  POSTPONE RBP $ 8 POSTPONE ADDQ$ ;
-:! DPUSHQ  POSTPONE RBP $ 8 POSTPONE SUBQ$  POSTPONE RBPMOVQ! ;
+:! BPOPQ  POSTPONE RBPMOVQ@  POSTPONE RBP $ 8 POSTPONE ADDQ$ ;
+:! BPUSHQ  POSTPONE RBP $ 8 POSTPONE SUBQ$  POSTPONE RBPMOVQ! ;
 
 : COND  RBX RAX MOVQ  DROP  RBX RBX TESTQ ;
 :! BEGIN  HERE ;
 :! UNTIL  POSTPONE COND POSTPONE JZ$ ;
 
-: =  RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  RDX DPOPQ ;
+: =  RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  RDX BPOPQ ;
 :! \  BEGIN  KEY $ A =  UNTIL ;
 
 \ Now that comments are supported, documentation for the high-level stuff can begin.
@@ -20,7 +20,7 @@
 \ The word HERE is another interesting case, since it appears to be necessary to compile relative offsets.
 \ Somehow, though, it actually seems more likely that it can be avoided.
 
-\ DPOPQ and DPUSHQ are sort of pseudo-instructions, and the definitions of BEGIN and UNTIL are just temporary (but necessary) infrastructure.
+\ BPOPQ and BPUSHQ are sort of pseudo-instructions, and the definitions of BEGIN and UNTIL are just temporary (but necessary) infrastructure.
 
 \ The first immediately useful thing to implement is primitive inlining, so it affects as much code as possible.
 \ Since there aren't that many primitives to begin with, this works out nicely.
@@ -39,16 +39,16 @@
 \ (Note that some operations are redefined to allow for a more optimized inlining implementation)
 
 \ Stack manipulation
-:! DUP  { RDX DPUSHQ  RDX RAX MOVQ } ;
-:! DROP  { RAX RDX MOVQ  RDX DPOPQ } ;
+:! DUP  { RDX BPUSHQ  RDX RAX MOVQ } ;
+:! DROP  { RAX RDX MOVQ  RDX BPOPQ } ;
 :! SWAP  { RDX RAXXCHGQ } ;
-:! NIP  { RDX DPOPQ } ;
-:! TUCK  { RAX DPUSHQ } ;
+:! NIP  { RDX BPOPQ } ;
+:! TUCK  { RAX BPUSHQ } ;
 :! OVER  { SWAP TUCK } ;
-:! ROT  { RBX DPOPQ  DUP  RAX RBX MOVQ } ;
-:! -ROT  { RBX RAX MOVQ  DROP  RBX DPUSHQ } ;
-:! 2DUP  { RDX DPUSHQ  RAX DPUSHQ } ;
-:! 2DROP  { RAX DPOPQ  RDX DPOPQ } ;
+:! ROT  { RBX BPOPQ  DUP  RAX RBX MOVQ } ;
+:! -ROT  { RBX RAX MOVQ  DROP  RBX BPUSHQ } ;
+:! 2DUP  { RDX BPUSHQ  RAX BPUSHQ } ;
+:! 2DROP  { RAX BPOPQ  RDX BPOPQ } ;
 
 \ Memory operations
 :! @  { RAX RAX MOVQ@ } ;
