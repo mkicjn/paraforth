@@ -148,7 +148,7 @@ dolit:
 link ";"
 	; immediate
 semi:
-	mov	byte [rdi], 0xc3
+	mov	byte [rdi], 0xc3 ; ret
 	inc	rdi
 	ret
 
@@ -158,8 +158,6 @@ semi:
 ;
 ; These appear to be the minimal set necessary to implement an assembler in Forth.
 ; This was determined by writing a prototype of the assembler in a different Forth.
-
-; TODO: Pick a better naming convention than a trailing underscore for some of these labels.
 
 ; System interface primitives:
 
@@ -207,13 +205,13 @@ swap:
 
 link "+"
 	call	docol
-add_:
+plus:
 	add	rdx, rax
 	jmp	drop
 
 link "-"
 	call	docol
-sub_:
+minus:
 	sub	rdx, rax
 	jmp	drop
 
@@ -379,7 +377,7 @@ def_:
 	push	rax ;{
 	; store pointer to latest link
 	mov	rax, rsi
-	mov	rsi, rdi
+	mov	rsi, rdi ; update latest link to new location
 	stosq
 	pop	rax ;}
 	; store next name from input

@@ -21,9 +21,15 @@
 :! INCQ  REX.W, $ FF C, $ 0 $ 3 MODR/M, ;
 :! DECQ  REX.W, $ FF C, $ 1 $ 3 MODR/M, ;
 
-:! HERE   DOCOL  DUP  RAX RDI MOVQ ;
-:! REL32, DOCOL  HERE $ 4 + - D, ;
-:! REL8,  DOCOL  HERE $ 1 + - C, ;
+:! ADDQ   REX.W, $ 01 C, $ 3 MODR/M, ;
+:! SUBQ   REX.W, $ 29 C, $ 3 MODR/M, ;
+:! ADDQ$  REX.W, $ 81 C, SWAP $ 0 $ 3 MODR/M, D, ;
+:! SUBQ$  REX.W, $ 81 C, SWAP $ 5 $ 3 MODR/M, D, ;
+:! MULQ   REX.W, $ F7 C, $ 4 $ 3 MODR/M, ;
+:! DIVQ   REX.W, $ F7 C, $ 6 $ 3 MODR/M, ;
+
+:! REL32, DOCOL  RAX RDI SUBQ  $ 4 - D, ;
+:! REL8,  DOCOL  RAX RDI SUBQ  $ 1 - C, ;
 
 :! MOVQ!  REX.W,  $ 89 C,  $ 0 MODR/M, ;
 :! MOVQ@  REX.W,  $ 8B C,  $ 0 MODR/M, ;
@@ -37,16 +43,9 @@
 
 :! RAXXCHGQ  REX.W, $ 90 + C, ;
 
-:! COMPILE DOCOL  $ E8 C, REL32, ;
+:! COMPILE  DOCOL  $ E8 C, REL32, ;
 :! CALLQ$  COMPILE ;
 :! CALL  $ FF C, $ 2 $ 3 MODR/M, ;
-
-:! ADDQ   REX.W, $ 01 C, $ 3 MODR/M, ;
-:! SUBQ   REX.W, $ 29 C, $ 3 MODR/M, ;
-:! ADDQ$  REX.W, $ 81 C, SWAP $ 0 $ 3 MODR/M, D, ;
-:! SUBQ$  REX.W, $ 81 C, SWAP $ 5 $ 3 MODR/M, D, ;
-:! MULQ   REX.W, $ F7 C, $ 4 $ 3 MODR/M, ;
-:! DIVQ   REX.W, $ F7 C, $ 6 $ 3 MODR/M, ;
 
 :! PUSHQ  $ 50 + C, ;
 :! POPQ   $ 58 + C, ;

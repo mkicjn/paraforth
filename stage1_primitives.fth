@@ -5,7 +5,7 @@
 :! BPUSHQ  POSTPONE RBP $ 8 POSTPONE SUBQ$  POSTPONE RBPMOVQ! ;
 
 : COND  RBX RAX MOVQ  DROP  RBX RBX TESTQ ;
-:! BEGIN  HERE ;
+:! BEGIN  DUP  RAX RDI MOVQ ;
 :! UNTIL  POSTPONE COND POSTPONE JZ$ ;
 
 : =  RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  RDX BPOPQ ;
@@ -17,10 +17,8 @@
 \ I chose to solve this by implementing COMPILE as a regular colon word, which implements a sort of "generalized DOCOL."
 \ Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
 
-\ The word HERE is another interesting case, since it appears to be necessary to compile relative offsets.
-\ Somehow, though, it actually seems more likely that it can be avoided.
-
 \ BPOPQ and BPUSHQ are sort of pseudo-instructions, and the definitions of BEGIN and UNTIL are just temporary (but necessary) infrastructure.
+\ (Fun fact - BEGIN is just an immediate HERE)
 
 \ The first immediately useful thing to implement is primitive inlining, so it affects as much code as possible.
 \ Since there aren't that many primitives to begin with, this works out nicely.
@@ -101,7 +99,7 @@
 
 \ Control structures
 : COND  { RBX RAX MOVQ  DROP  RBX RBX TESTQ } ; \ Compile code that sets flags based on top stack item
-:! BEGIN  HERE ; \ Leave a back reference on the stack
+:! BEGIN  HERE ; \ Leave a back reference on the stack (redundant definition here only for completeness)
 :! AGAIN        { JMPL$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
 :! UNTIL  COND  { JZL$ } ;  \ Resolve a back reference on the stack with a conditional jump
 :! AHEAD        HERE 1+     HERE { JMPL$ } ; \ Leave a forward reference on the stack
