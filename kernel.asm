@@ -74,7 +74,7 @@ start:
 .repl:	call	name
 	call	find
 	mov	rbx, rax
-	call	drop_
+	call	drop
 	call	rbx
 	jmp	.repl
 
@@ -135,10 +135,11 @@ docol: ; ^ Self-application
 
 link "DOLIT"
 	call	docol
-dolit:	mov	dword [rdi],   0xf86d8d48 ; lea rbp, [rbp-8]
+dolit:
+	mov	dword [rdi],   0xf86d8d48 ; lea rbp, [rbp-8]
 	mov	dword [rdi+4], 0x00558948 ; mov [rbp], rdx
 	mov	dword [rdi+8], 0xc28948   ; mov rdx, rax
-	mov	word [rdi+11], 0xb848     ; movabs rdx
+	mov	word [rdi+11], 0xb848     ; movabs rax
 	lea	rdi, [rdi+13]
 	ret
 
@@ -146,7 +147,8 @@ dolit:	mov	dword [rdi],   0xf86d8d48 ; lea rbp, [rbp-8]
 
 link ";"
 	; immediate
-exit_:	mov	byte [rdi], 0xc3
+semi:
+	mov	byte [rdi], 0xc3
 	inc	rdi
 	ret
 
@@ -163,17 +165,20 @@ exit_:	mov	byte [rdi], 0xc3
 
 link "BYE"
 	call	docol
-bye:	jmp	sys_exit
+bye:
+	jmp	sys_exit
 
 link "KEY"
 	call	docol
-key:	call	dup_
+key:
+	call	dup_
 	jmp	sys_rx
 
 link "EMIT"
 	call	docol
-emit:	call	sys_tx
-	jmp	drop_
+emit:
+	call	sys_tx
+	jmp	drop
 
 ; Stack primitives:
 
@@ -186,14 +191,14 @@ dup_:
 
 link "DROP"
 	call	docol
-drop_:
+drop:
 	mov	rax, rdx
 	DPOP	rdx
 	ret
 
 link "SWAP"
 	call	docol
-swap_:
+swap:
 	xchg	rax, rdx
 	; ^ NB. There's a special encoding for xchg rax, r64
 	ret
@@ -203,14 +208,14 @@ swap_:
 link "+"
 	call	docol
 add_:
-	add	rax, rdx
-	DPOP	rdx
-	ret
+	add	rdx, rax
+	jmp	drop
+
 link "-"
 	call	docol
 sub_:
 	sub	rdx, rax
-	jmp	drop_
+	jmp	drop
 
 link "LSHIFT"
 	call	docol
@@ -219,7 +224,7 @@ lshift:
 	mov	ecx, eax
 	shl	rdx, cl
 	mov	rcx, rbx
-	jmp	drop_
+	jmp	drop
 
 link "RSHIFT"
 	call	docol
@@ -228,7 +233,7 @@ rshift:
 	mov	ecx, eax
 	shr	rdx, cl
 	mov	rcx, rbx
-	jmp	drop_
+	jmp	drop
 
 ; Memory primitive:
 
@@ -236,7 +241,7 @@ link "C,"
 	call	docol
 c_:
 	stosb
-	jmp	drop_
+	jmp	drop
 
 
 ;			Input Parsing
@@ -249,7 +254,8 @@ c_:
 
 link "NAME,"
 	call	docol
-name_:	; rdi: compilation area
+name_:
+	; rdi: compilation area
 	; rdi += length of counted string for input
 	; rbx clobbered
 	push	rax ;{ prev val
@@ -278,7 +284,8 @@ name_:	; rdi: compilation area
 
 link "NAME"
 	call	docol
-name:	call	dup_
+name:
+	call	dup_
 	mov	rax, rdi
 	call	name_
 	mov	rdi, rax
@@ -289,7 +296,8 @@ name:	call	dup_
 
 link "DIGIT"
 	call	docol
-digit:	; al: digit ASCII character [0-9A-Za-z]
+digit:
+	; al: digit ASCII character [0-9A-Za-z]
 	; rax = digit value (bases 2-36)
 	cmp	al, 0x39 ; '9'
 	ja	.gt9
@@ -311,7 +319,8 @@ digit:	; al: digit ASCII character [0-9A-Za-z]
 
 link "$"
 	; immediate
-hex:	call	name
+hex:
+	call	name
 	PUSHA rcx, rdx, rsi ;{
 	mov	rsi, rax
 	lodsb
@@ -326,7 +335,7 @@ hex:	call	name
 	POPA rcx, rdx, rsi ;}
 	call	dolit
 	stosq
-	jmp	drop_
+	jmp	drop
 
 
 ;			Dictionary Manipulation
@@ -335,7 +344,8 @@ hex:	call	name
 
 link "FIND"
 	call	docol
-find:	; rax: counted string
+find:
+	; rax: counted string
 	; rsi: latest link
 	; rax = xt or null
 	; rbx clobbered
@@ -365,7 +375,8 @@ find:	; rax: counted string
 
 link ":!"
 	; immediate
-def_:	push	rax ;{
+def_:
+	push	rax ;{
 	; store pointer to latest link
 	mov	rax, rsi
 	mov	rsi, rdi
