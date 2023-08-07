@@ -14,6 +14,7 @@
 :! RSI  $ 6 ;
 :! RDI  $ 7 ;
 :! (SIB)  $ 4 ;
+:! (NONE) $ 4 ;
 
 :! MEM     DOCOL  $ 0 ;
 :! MEM+8   DOCOL  $ 1 ;

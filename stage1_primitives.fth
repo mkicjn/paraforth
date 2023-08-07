@@ -57,6 +57,14 @@
 :! ,   { STOSQ  DROP } ;
 :! C,  { STOSB  DROP } ;
 
+\ Return stack operations
+:! >R  { RAX PUSHQ  DROP } ;
+:! R>  { DUP  RAX POPQ } ;
+:! 2>R  { RDX PUSHQ  RAX PUSHQ  2DROP } ;
+:! 2R>  { 2DUP  RDX POPQ  RAX POPQ } ;
+:! R@  { DUP  RAX (SIB) MOVQ@  RSP (NONE) R*1 SIB, } ;
+:! RDROP  $ 8 { RSP ADDQ$ } ;
+
 \ Basic arithmetic
 :! +  { RAX RDX ADDQ  NIP } ;
 :! -  { RDX RAX SUBQ  DROP } ;
@@ -168,13 +176,6 @@
 \ : QUIT  BEGIN CHAR [ EMIT BL EMIT POSTPONE [ AGAIN ;
 \ ^ This definition almost works, but needs to reset registers
 \ Another problem: These definitions would rely on each other.
-
-\ Return stack manipulation
-: >R  RBX POPQ  RAX PUSHQ  RBX PUSHQ  DROP ;
-: R>  DUP  RBX POPQ  RAX POPQ  RBX PUSHQ ;
-: R@  DUP  RBX POPQ  RAX POPQ  RAX PUSHQ RBX PUSHQ ;
-\ TODO fix ^ Like RBP, MOVQ! doesn't work as intended with RSP due to SIB encoding
-: RDROP  RBX POPQ  RSP [ $ 8 ] ADDQ$  RBX PUSHQ ;
 
 \ Memory copying
 : CONTEXT@   DUP RAX RSI MOVQ  DUP RAX RDI MOVQ  DUP RAX RCX MOVQ ; \ i.e., string instruction context
