@@ -28,6 +28,7 @@
 :! '  NAME FIND LITERAL ;
 :! }  ; \ just a no-op to compare against
 :! {  BEGIN  NAME FIND DUP COMPILE  ' } =  UNTIL ; \ Since we don't have WHILE and REPEAT, } gets postponed too - good thing it's a no-op.
+\ ^ NOTE This mechanism for finding the end of the input will break if } is ever redefined due to hyperstatic scoping
 
 \ This makes it act as though the user typed all those words directly into their definition, since words always get executed immediately when typed.
 \ However, it won't work at all with words that parse input, because there's no way to save the input for later.

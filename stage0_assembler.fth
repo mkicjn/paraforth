@@ -13,77 +13,88 @@
 :! RBP  $ 5 ;
 :! RSI  $ 6 ;
 :! RDI  $ 7 ;
+:! (SIB)  $ 4 ;
 
-:! REX.W, DOCOL  $ 48 C, ;
+:! MEM     DOCOL  $ 0 ;
+:! MEM+8   DOCOL  $ 1 ;
+:! MEM+32  DOCOL  $ 2 ;
+:! REG     DOCOL  $ 3 ;
 :! MODR/M, DOCOL  $ 3 LSHIFT + $ 3 LSHIFT + C, ;
 
-:! MOVQ  REX.W,  $ 89 C,  $ 3 MODR/M, ;
-:! INCQ  REX.W, $ FF C, $ 0 $ 3 MODR/M, ;
-:! DECQ  REX.W, $ FF C, $ 1 $ 3 MODR/M, ;
+:! R*1  $ 0 ;
+:! R*2  $ 1 ;
+:! R*4  $ 2 ;
+:! R*8  $ 3 ;
+:! SIB, MODR/M, ;
 
-:! ADDQ   REX.W, $ 01 C, $ 3 MODR/M, ;
-:! SUBQ   REX.W, $ 29 C, $ 3 MODR/M, ;
-:! ADDQ$  REX.W, $ 81 C, SWAP $ 0 $ 3 MODR/M, D, ;
-:! SUBQ$  REX.W, $ 81 C, SWAP $ 5 $ 3 MODR/M, D, ;
-:! MULQ   REX.W, $ F7 C, $ 4 $ 3 MODR/M, ;
-:! DIVQ   REX.W, $ F7 C, $ 6 $ 3 MODR/M, ;
+:! REX.W, DOCOL  $ 48 C, ;
+
+:! ADDQ   REX.W, $ 01 C, REG MODR/M, ;
+:! SUBQ   REX.W, $ 29 C, REG MODR/M, ;
+:! ADDQ$  REX.W, $ 81 C, SWAP $ 0 REG MODR/M, D, ;
+:! SUBQ$  REX.W, $ 81 C, SWAP $ 5 REG MODR/M, D, ;
+:! MULQ   REX.W, $ F7 C, $ 4 REG MODR/M, ;
+:! DIVQ   REX.W, $ F7 C, $ 6 REG MODR/M, ;
+:! INCQ   REX.W, $ FF C, $ 0 REG MODR/M, ;
+:! DECQ   REX.W, $ FF C, $ 1 REG MODR/M, ;
 
 :! REL32, DOCOL  RAX RDI SUBQ  $ 4 - D, ;
 :! REL8,  DOCOL  RAX RDI SUBQ  $ 1 - C, ;
 
-:! MOVQ!  REX.W,  $ 89 C,  $ 0 MODR/M, ;
-:! MOVQ@  REX.W,  $ 8B C,  $ 0 MODR/M, ;
+:! MOVQ   REX.W,  $ 89 C,  REG MODR/M, ;
+:! MOVQ!  REX.W,  $ 89 C,  MEM MODR/M, ;
+:! MOVQ@  REX.W,  SWAP $ 8B   C,  MEM MODR/M, ;
 :! MOVQ$  REX.W,  SWAP $ B8 + C,  , ;
 :! RBPMOVQ@  $ 5 SWAP  REX.W, $ 8B C, $ 1 MODR/M, $ 0 C, ;
 :! RBPMOVQ!  $ 5 SWAP  REX.W, $ 89 C, $ 1 MODR/M, $ 0 C, ;
 
-:! MOVB!  $ 88 C, $ 0 MODR/M, ;
-:! MOVZXB@  REX.W, $ B60F W, SWAP $ 0 MODR/M, ;
-:! MOVZXBL  $ B60F W, $ 3 MODR/M, ;
+:! MOVB!  $ 88 C, MEM MODR/M, ;
+:! MOVZXB@  REX.W, $ B60F W, SWAP MEM MODR/M, ;
+:! MOVZXBL  $ B60F W, REG MODR/M, ;
 
 :! RAXXCHGQ  REX.W, $ 90 + C, ;
 
 :! COMPILE  DOCOL  $ E8 C, REL32, ;
 :! CALLQ$  COMPILE ;
-:! CALL  $ FF C, $ 2 $ 3 MODR/M, ;
+:! CALL  $ FF C, $ 2 REG MODR/M, ;
 
 :! PUSHQ  $ 50 + C, ;
 :! POPQ   $ 58 + C, ;
 
-:! ANDQ  REX.W, $ 21 C, $ 3 MODR/M, ;
-:!  ORQ  REX.W, $ 09 C, $ 3 MODR/M, ;
-:! XORQ  REX.W, $ 31 C, $ 3 MODR/M, ;
-:! NOTQ  REX.W, $ F7 C, $ 2 $ 3 MODR/M, ;
-:! NEGQ  REX.W, $ F7 C, $ 3 $ 3 MODR/M, ;
+:! ANDQ  REX.W, $ 21 C, REG MODR/M, ;
+:!  ORQ  REX.W, $ 09 C, REG MODR/M, ;
+:! XORQ  REX.W, $ 31 C, REG MODR/M, ;
+:! NOTQ  REX.W, $ F7 C, $ 2 REG MODR/M, ;
+:! NEGQ  REX.W, $ F7 C, $ 3 REG MODR/M, ;
 
-:! SHRQ$  SWAP REX.W, $ C1 C, $ 5 $ 3 MODR/M, C, ;
-:! SHLQ$  SWAP REX.W, $ C1 C, $ 6 $ 3 MODR/M, C, ;
-:! SARQ$  SWAP REX.W, $ C1 C, $ 7 $ 3 MODR/M, C, ;
-:! 1SHRQ  REX.W, $ D1 C, $ 5 $ 3 MODR/M, ;
-:! 1SHLQ  REX.W, $ D1 C, $ 6 $ 3 MODR/M, ;
-:! 1SARQ  REX.W, $ D1 C, $ 7 $ 3 MODR/M, ;
-:! CLSHRQ  REX.W, $ D3 C, $ 5 $ 3 MODR/M, ;
-:! CLSHLQ  REX.W, $ D3 C, $ 6 $ 3 MODR/M, ;
-:! CLSARQ  REX.W, $ D3 C, $ 7 $ 3 MODR/M, ;
+:! SHRQ$  SWAP REX.W, $ C1 C, $ 5 REG MODR/M, C, ;
+:! SHLQ$  SWAP REX.W, $ C1 C, $ 6 REG MODR/M, C, ;
+:! SARQ$  SWAP REX.W, $ C1 C, $ 7 REG MODR/M, C, ;
+:! 1SHRQ  REX.W, $ D1 C, $ 5 REG MODR/M, ;
+:! 1SHLQ  REX.W, $ D1 C, $ 6 REG MODR/M, ;
+:! 1SARQ  REX.W, $ D1 C, $ 7 REG MODR/M, ;
+:! CLSHRQ  REX.W, $ D3 C, $ 5 REG MODR/M, ;
+:! CLSHLQ  REX.W, $ D3 C, $ 6 REG MODR/M, ;
+:! CLSARQ  REX.W, $ D3 C, $ 7 REG MODR/M, ;
 
-:! CMPQ   SWAP REX.W, $ 39 C, $ 3 MODR/M, ;
-:! TESTQ  REX.W, $ 85 C, $ 3 MODR/M, ;
+:! CMPQ   SWAP REX.W, $ 39 C, REG MODR/M, ;
+:! TESTQ  REX.W, $ 85 C, REG MODR/M, ;
 
-:! SETZB   $ 940F W, $ 0 $ 3 MODR/M, ;
-:! SETEB   $ 940F W, $ 0 $ 3 MODR/M, ;
-:! SETNZB  $ 950F W, $ 0 $ 3 MODR/M, ;
-:! SETNEB  $ 950F W, $ 0 $ 3 MODR/M, ;
-:! SETLB   $ 9C0F W, $ 0 $ 3 MODR/M, ;
-:! SETGEB  $ 9D0F W, $ 0 $ 3 MODR/M, ;
-:! SETLEB  $ 9E0F W, $ 0 $ 3 MODR/M, ;
-:! SETGB   $ 9F0F W, $ 0 $ 3 MODR/M, ;
+:! SETZB   $ 940F W, $ 0 REG MODR/M, ;
+:! SETEB   $ 940F W, $ 0 REG MODR/M, ;
+:! SETNZB  $ 950F W, $ 0 REG MODR/M, ;
+:! SETNEB  $ 950F W, $ 0 REG MODR/M, ;
+:! SETLB   $ 9C0F W, $ 0 REG MODR/M, ;
+:! SETGEB  $ 9D0F W, $ 0 REG MODR/M, ;
+:! SETLEB  $ 9E0F W, $ 0 REG MODR/M, ;
+:! SETGB   $ 9F0F W, $ 0 REG MODR/M, ;
 
-:! CMOVAQ  SWAP REX.W, $ 470F W, $ 3 MODR/M, ;
-:! CMOVBQ  SWAP REX.W, $ 420F W, $ 3 MODR/M, ;
-:! CMOVGQ  SWAP REX.W, $ 4F0F W, $ 3 MODR/M, ;
-:! CMOVLQ  SWAP REX.W, $ 4C0F W, $ 3 MODR/M, ;
+:! CMOVAQ  SWAP REX.W, $ 470F W, REG MODR/M, ;
+:! CMOVBQ  SWAP REX.W, $ 420F W, REG MODR/M, ;
+:! CMOVGQ  SWAP REX.W, $ 4F0F W, REG MODR/M, ;
+:! CMOVLQ  SWAP REX.W, $ 4C0F W, REG MODR/M, ;
 
-:! JMP   $ FF C, $ 4 $ 3 MODR/M, ;
+:! JMP   $ FF C, $ 4 REG MODR/M, ;
 :! JMP$  $ EB C, REL8, ;
 :! JZ$   $ 74 C, REL8, ;
 :! JNZ$   $ 75 C, REL8, ;
