@@ -57,7 +57,7 @@
 
 :! COMPILE  DOCOL  $ E8 C, REL32, ;
 :! CALLQ$  COMPILE ;
-:! CALL  $ FF C, $ 2 REG MODR/M, ;
+:! CALLQ  $ FF C, $ 2 REG MODR/M, ;
 
 :! PUSHQ  $ 50 + C, ;
 :! POPQ   $ 58 + C, ;

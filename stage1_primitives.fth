@@ -15,7 +15,7 @@
 
 \ The main thing to point out before now is that there's a bit of a chicken-and-egg problem between COMPILE, POSTPONE, and CALLQ$.
 \ I chose to solve this by implementing COMPILE as a regular colon word, which implements a sort of "generalized DOCOL."
-\ Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
+\ TODO : Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
 
 \ BPOPQ and BPUSHQ are sort of pseudo-instructions, and the definitions of BEGIN and UNTIL are just temporary (but necessary) infrastructure.
 \ (Fun fact - BEGIN is just an immediate HERE)
@@ -24,14 +24,16 @@
 \ Since there aren't that many primitives to begin with, this works out nicely.
 
 \ Inlining can be implemented easily enough by creating a parsing word that postpones every word entered after it until it hits an "end" word.
+\ I choose braces for this syntax because it's the conceptual opposite of what brackets would represent in a typical Forth.
 : LITERAL  DOLIT , ;
 :! '  NAME FIND LITERAL ;
 :! }  ; \ just a no-op to compare against
 :! {  BEGIN  NAME FIND DUP COMPILE  ' } =  UNTIL ; \ Since we don't have WHILE and REPEAT, } gets postponed too - good thing it's a no-op.
-\ ^ NOTE This mechanism for finding the end of the input will break if } is ever redefined due to hyperstatic scoping
+\ TODO : This is good enoough, but will break if } is ever redefined due to hyperstatic scoping - would prefer to avoid this, and stop compiling no-ops.
 
 \ This makes it act as though the user typed all those words directly into their definition, since words always get executed immediately when typed.
 \ However, it won't work at all with words that parse input, because there's no way to save the input for later.
+\ TODO : This is much better than copying compiled code (which breaks relative offsets), but is there an elegant way to address this final limitation?
 
 \ Implementing the actual primitives is pretty straightforward and unexciting.
 \ See the notes in kernel.asm to understand the register convention.
@@ -108,6 +110,7 @@
 
 \ Control structures
 : COND  { RBX RAX MOVQ  DROP  RBX RBX TESTQ } ; \ Compile code that sets flags based on top stack item
+\ ^ Note: Not immediate
 :! BEGIN  HERE ; \ Leave a back reference on the stack (redundant definition here only for completeness)
 :! AGAIN        { JMPL$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
 :! UNTIL  COND  { JZL$ } ;  \ Resolve a back reference on the stack with a conditional jump
@@ -125,7 +128,27 @@
 :! NEXT  { LOOP$  RCX POPQ } ;
 :! AFT  DROP  POSTPONE AHEAD  POSTPONE BEGIN  SWAP ;
 :! I  { DUP  RAX RCX MOVQ } ;
-\ TODO : DO, LOOP, +LOOP and LEAVE
+\ TODO : Include DO, LOOP, +LOOP and LEAVE?
+
+\ "Interpreter"
+
+\ This is another interesting place where this Forth differs from tradition.
+\ Since there is no distinct compile/interpret state, we can compensate quite effectively by simply allowing code to be compiled and executed "immediately".
+\ The obvious limitation this has is that it's possible to accidentally compile over the code while it executes.
+
+\ So far, though, this limitation seems difficult to run into by accident, and easy to work around if you do.
+\ TODO : There are obvious modifications to try if this ever does becomes an issue, but a general solution is not clear enough to implement right away.
+\ Either way, this is arguably more powerful in some ways than what is offered in a typical Forth, since it can be arbitrarily nested in interesting ways.
+\ This approach also eliminates the need for a whole host of inconsistently-bracketed or state-aware words.
+
+:! EXECUTE  { RBX RAX MOVQ  DROP  RBX CALLQ } ;
+:! [ HERE ;
+:! ] POSTPONE ; DUP THERE DROP EXECUTE ;
+
+\ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the kernel is.
+\ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and executed immediately themselves.
+\ This idea starts to feel like it's approaching some distillation of the concept of metaprogramming - can it be taken any further?
+
 
 \ TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 
@@ -135,6 +158,10 @@
 \ * Focus on inlining as many primitives as possible (and implement the rest normally)
 \ Goal here is now to have a stable (but not sophisticated) platform on which to build
 \ The sophisticated bits can and should come later.
+
+\ Probably want to include CREATE/DOES>, VARIABLE/CONSTANT, and other standard Forth words in here
+\ That is, unless I get an interesting load order mechanism sorted out
+\ Question: Where to draw the line with the "primitive" distinction?
 
 \ TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 
@@ -149,33 +176,6 @@
 \ Character constants
 : CR  $ A EMIT ;
 :! BL  $ 20 LITERAL ;
-
-\ "Interpreter"
-: EXECUTE  RBX RAX MOVQ  DROP  RBX JMP
-\ This is another interesting place where this Forth differs from tradition.
-\ This compiler doesn't have an "interpreter" mode, so instead, I create a new compiler loop called `[` which is allowed to call itself,
-\ and supplement that with a corresponding word `]` that exits the running compiler and immediately runs the compiled code.
-\ Using `[` and `]`, one can simply compile and run arbitrary code at compile time, circumventing the need for a proper interpreter.
-: NOT-FOUND  COUNT TYPE CHAR ? EMIT CR POSTPONE \
-\ ^ TODO Consider replacing POSTPONE \ with QUIT
-:! [  RDI PUSHQ  BEGIN  NAME DUP FIND  DUP
-                 IF  NIP EXECUTE
-                 ELSE  DROP NOT-FOUND
-                 THEN AGAIN ;
-:! ]  POSTPONE ;  RBX POPQ  RDI POPQ  RDI JMP
-
-\ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so quickly, given how simple the kernel is.
-\ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and composed immediately at runtime.
-\ This idea starts to feel like it's approaching a distillation of some kind of fundamental concept - is it abstraction?
-\ I guess the practical requirements are to be able to manipulate words and the dictionary. Some serious parallels with LISP, but Forth is even simpler.
-\ To be able to assemble arbitrary machine code, some basic arithmetic is also apparently necessary.
-\ How much further can it be realistically taken? What's the core concept to all this? "Metaprogramming" doesn't quite capture it.
-
-[
-\ TODO ^ Maybe this should be replaced by QUIT later.
-\ : QUIT  BEGIN CHAR [ EMIT BL EMIT POSTPONE [ AGAIN ;
-\ ^ This definition almost works, but needs to reset registers
-\ Another problem: These definitions would rely on each other.
 
 \ Memory copying
 : CONTEXT@   DUP RAX RSI MOVQ  DUP RAX RDI MOVQ  DUP RAX RCX MOVQ ; \ i.e., string instruction context
