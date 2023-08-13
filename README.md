@@ -13,21 +13,25 @@ _(This project is a very slow work in progress and has seen a long pause in deve
 #### Interesting Features:
 
 * Tiny binary executable size - under one kilobyte
+* Fewer primitives than eForth (20 vs. 31)
+  * Some aren't even technically necessary to expose, but are provided for reuse (i.e., `NAME` and `DIGIT`)
 * Compile-only Forth, with no `STATE` variable and no interpreter buffer
   * Code can still be "interpreted" (i.e., compiled and then run immediately) using `[` and `]`
-* No built-in number syntax (parsing words like `$` and `#` used for integer literals)
-* No formal concept of "immediate" words, either - all words execute immediately when typed
-  * (The catch is, all normal words do is compile a call instruction to the rest of their code)
-* Subroutine-threaded code, with inlined primitives implemented as an extension of the compiler
-* An x86-64 assembler, also implemented as an extension of the compiler
+* An assembler for a useful subset of x86-64 implemented as a runtime extension of the compiler
+* Subroutine-threaded code, with inlined primitives also implemented at runtime as a compiler extension
+  * Neat syntax for this - opposite to `[` and `]`, blocks of code can be *postponed* using `{` and `}`
+* No built-in number syntax (parsing words like `$` and `#` used for integer literals of different bases)
+* No internalized concept of "immediate" words - all words execute immediately when typed
+  * (The trick is, non-immediate words simply compile a call instruction to their runtime code and return)
 * Basic ELF executable generator demo (but no metacompiled version yet)
-* All done through a basic "serial interface" - KEY, EMIT, and BYE are the only OS primitives
-  * *(TODO: Scripts to make it easier to run/debug with a fixed source code load order)*
+* All I/O through a basic serial interface - `KEY` and `EMIT` are the only OS primitives in the kernel
+  * The `syscall` instruction can be used to implement more (such as `BYE`)
+  * *(TODO: Scripts to set up the terminal and make it easier to run & debug with a source code load order file)*
 
 #### Current Dependencies:
 
 * FASM (to assemble the kernel)
-* Linux-based OS (only to host system calls)
+* Linux-based OS (only to host `read()` and `write()` syscalls)
 
 My hope for this project is it will eventually become fully self-hosting, even down to the OS level in the distant future.
 

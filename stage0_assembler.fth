@@ -111,4 +111,4 @@
 :! STOSB  $ AA C, ;
 :! STOSQ  REX.W, $ AB C, ;
 
-:! SYSCALLQ  $ 050F W, ;
+:! SYSCALL  $ 050F W, ;

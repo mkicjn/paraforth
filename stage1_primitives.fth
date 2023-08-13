@@ -1,14 +1,14 @@
 :! POSTPONE  NAME FIND COMPILE ;
 :! :  POSTPONE :! POSTPONE DOCOL ;
 
-:! BPOPQ  POSTPONE RBPMOVQ@  POSTPONE RBP $ 8 POSTPONE ADDQ$ ;
-:! BPUSHQ  POSTPONE RBP $ 8 POSTPONE SUBQ$  POSTPONE RBPMOVQ! ;
+:! DPOPQ  POSTPONE RBPMOVQ@  POSTPONE RBP $ 8 POSTPONE ADDQ$ ;
+:! DPUSHQ  POSTPONE RBP $ 8 POSTPONE SUBQ$  POSTPONE RBPMOVQ! ;
 
 : COND  RBX RAX MOVQ  DROP  RBX RBX TESTQ ;
 :! BEGIN  DUP  RAX RDI MOVQ ;
 :! UNTIL  POSTPONE COND POSTPONE JZ$ ;
 
-: =  RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  RDX BPOPQ ;
+: =  RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  RDX DPOPQ ;
 :! \  BEGIN  KEY $ A =  UNTIL ;
 
 \ Now that comments are supported, documentation for the high-level stuff can begin.
@@ -17,7 +17,7 @@
 \ I chose to solve this by implementing COMPILE as a regular colon word, which implements a sort of "generalized DOCOL."
 \ TODO : Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
 
-\ BPOPQ and BPUSHQ are sort of pseudo-instructions, and the definitions of BEGIN and UNTIL are just temporary (but necessary) infrastructure.
+\ DPOPQ and DPUSHQ are sort of pseudo-instructions, and the definitions of BEGIN and UNTIL are just temporary (but necessary) infrastructure.
 \ (Fun fact - BEGIN is just an immediate HERE)
 
 \ The first immediately useful thing to implement is primitive inlining, so it affects as much code as possible.
@@ -40,16 +40,16 @@
 \ (Note that some operations are redefined to allow for a more optimized inlining implementation)
 
 \ Stack manipulation
-:! DUP  { RDX BPUSHQ  RDX RAX MOVQ } ;
-:! DROP  { RAX RDX MOVQ  RDX BPOPQ } ;
+:! DUP  { RDX DPUSHQ  RDX RAX MOVQ } ;
+:! DROP  { RAX RDX MOVQ  RDX DPOPQ } ;
 :! SWAP  { RDX RAXXCHGQ } ;
-:! NIP  { RDX BPOPQ } ;
-:! TUCK  { RAX BPUSHQ } ;
+:! NIP  { RDX DPOPQ } ;
+:! TUCK  { RAX DPUSHQ } ;
 :! OVER  { SWAP TUCK } ;
-:! ROT  { RBX BPOPQ  DUP  RAX RBX MOVQ } ;
-:! -ROT  { RBX RAX MOVQ  DROP  RBX BPUSHQ } ;
-:! 2DUP  { RDX BPUSHQ  RAX BPUSHQ } ;
-:! 2DROP  { RAX BPOPQ  RDX BPOPQ } ;
+:! ROT  { RBX DPOPQ  DUP  RAX RBX MOVQ } ;
+:! -ROT  { RBX RAX MOVQ  DROP  RBX DPUSHQ } ;
+:! 2DUP  { RDX DPUSHQ  RAX DPUSHQ } ;
+:! 2DROP  { RAX DPOPQ  RDX DPOPQ } ;
 
 \ Memory operations
 :! @  { RAX RAX MOVQ@ } ;
@@ -149,8 +149,14 @@
 \ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and executed immediately themselves.
 \ This idea starts to feel like it's approaching some distillation of the concept of metaprogramming - can it be taken any further?
 
+\ Example of how the "interpreter" mode would be used: assembly instructions using literals consume them immediately, so they have to pre-exist on the stack.
+: BYE  RDI RAX MOVQ  RAX [ $ 3C ] MOVQ$  SYSCALL ;
+\ ^ TODO : This word creates a Linux dependency in this source code, which is bad. It needs to be moved to another file once more syscalls are implemented.
+
 
 \ TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+
+\ UNDER CONSTRUCTION
 
 \ Continue going through and moving improved versions of below stuff up above.
 \ Two main directives:

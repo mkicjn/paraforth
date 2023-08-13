@@ -35,11 +35,6 @@ macro DPOP reg {
 ; To work, the following subroutines should behave the same as on Linux: sys_halt, sys_rx, sys_tx
 ; (These subroutines are only allowed to clobber rax.)
 
-sys_exit:
-	mov	edi, eax
-	mov	eax, 60
-	syscall
-
 sys_tx:
 	mov	[sys_xcv.mov+1], al
 	mov	eax, 1
@@ -160,11 +155,6 @@ semi:
 ; This was determined by writing a prototype of the assembler in a different Forth.
 
 ; System interface primitives:
-
-link "BYE"
-	call	docol
-bye:
-	jmp	sys_exit
 
 link "KEY"
 	call	docol
