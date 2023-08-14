@@ -376,7 +376,7 @@ def_:
 
 ;			Memory Map
 ;
-; This is the memory layout of the kernel, and is mainly relevant during initialization.
+; This is the memory layout of the core, and is mainly relevant during initialization.
 ; If this isn't enough memory, these numbers can be freely incremented.
 
 	rb	8 * 1024

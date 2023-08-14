@@ -36,7 +36,7 @@
 \ TODO : This is much better than copying compiled code (which breaks relative offsets), but is there an elegant way to address this final limitation?
 
 \ Implementing the actual primitives is pretty straightforward and unexciting.
-\ See the notes in kernel.asm to understand the register convention.
+\ See the notes in core.asm to understand the register convention.
 \ (Note that some operations are redefined to allow for a more optimized inlining implementation)
 
 \ Stack manipulation
@@ -145,7 +145,7 @@
 :! [ HERE ;
 :! ] POSTPONE ; DUP THERE DROP EXECUTE ;
 
-\ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the kernel is.
+\ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the core is.
 \ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and executed immediately themselves.
 \ This idea starts to feel like it's approaching some distillation of the concept of metaprogramming - can it be taken any further?
 

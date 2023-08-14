@@ -69,7 +69,7 @@ VARIABLE ELF-HEADER
 \ I think it should be fine as long as the host never executes the target's code, and vice versa.
 \ It would be preferable to keep things simple and avoid implementing wordlists if possible.
 
-\ Kernel words: DUP DROP SWAP + - LSHIFT RSHIFT C, DOCOL DOLIT BYE RX TX FIND NAME, :! ; NAME DIGIT $
+\ Core words: DUP DROP SWAP + - LSHIFT RSHIFT C, DOCOL DOLIT BYE RX TX FIND NAME, :! ; NAME DIGIT $
 
 \ TODO Redefine :! to fit the slightly different dictionary structure of the target
 \ TODO Define {, }, and INLINE inside the target (which means redefining MOVE, etc.)

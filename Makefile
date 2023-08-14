@@ -1,13 +1,13 @@
-ALL = kernel out
+ALL = core elf_demo
 
 all: $(ALL)
 
-kernel: kernel.asm
-	fasm kernel.asm
+core: core.asm
+	fasm core.asm
 	chmod +x $@
 
-out: kernel stage*
-	cat stage* | ./kernel > $@
+elf_demo: core stage*
+	cat stage* | ./core > $@
 	chmod +x $@
 
 .PHONY: clean

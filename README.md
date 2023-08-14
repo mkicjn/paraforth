@@ -9,7 +9,7 @@ _(This project is a slow work in progress.)_
 2. Implement a basic assembler using the compiler. ***(FINISHED, but some improvements planned)***
 3. Extend the existing Forth compiler in-place using the assembler. ***(NEARLY FINISHED)***
 4. Improve usability by providing a REPL with error handling, convenient launch scripts, and library code.
-5. Bootstrap the kernel and use the resulting system for other personal projects.
+5. Bootstrap the core and use the resulting system for other personal projects.
 
 ### Quirks and Features:
 
@@ -25,13 +25,13 @@ _(This project is a slow work in progress.)_
 * No built-in number syntax (parsing words like `$` and `#` used for integer literals of different bases)
 * No internalized concept of "immediate" words - all words execute immediately when typed
   * (The trick is, non-immediate words simply compile a call instruction to their runtime code and return)
-* All I/O through a basic serial interface - `KEY` and `EMIT` are the only OS primitives in the kernel
+* All I/O through a basic serial interface - `KEY` and `EMIT` are the only OS primitives in the core
 * Working (albeit very basic) ELF executable generator demo, but no metacompiled version yet
 * Reasonably extensive design notes in the source code (assumes familiarity with typical Forth internals)
 
 ### Current Dependencies:
 
-* FASM (flat assembler; used to assemble the kernel)
+* FASM (flat assembler; used to assemble the core)
 * Linux-based OS (only to host `read()` and `write()` syscalls)
 
 My hope for this project is that it will eventually become fully self-hosting, even down to the OS level in the distant future.
@@ -39,7 +39,7 @@ My hope for this project is that it will eventually become fully self-hosting, e
 ### Usage Notes:
 
 * Compile with `make`
-* Run with, e.g., `cat input | ./kernel > output` or `cat input - | ./kernel`
-* Debug with `gdb kernel -ex 'r < <(cat input)'` and an `int3` assembled somewhere
+* Run with, e.g., `cat input | ./core > output` or `cat input - | ./core`
+* Debug with `gdb core -ex 'r < <(cat input)'` and an `int3` assembled somewhere
   * Tip: Disassemble latest word with `x/10i $rsi+9+N` where *N* is the length of its name (i.e., `x/1c $rsi+8`)
-* Disassemble using `objdump -b binary -m i386:x86-64 -D kernel`
+* Disassemble using `objdump -b binary -m i386:x86-64 -D core`
