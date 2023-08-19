@@ -14,7 +14,7 @@ _(This project is a slow work in progress.)_
 ### Quirks and Features:
 
 * Tiny binary executable size - under one kilobyte
-* Very fast - an informal benchmark estimates approximately 2x speedup over `gforth-fast`
+* Fast - a basic informal benchmark estimates approximately 2-3x speedup over `gforth-fast`
   * (Benchmark task was to find the longest Collatz sequence for starting values under 1 million)
 * Fewer primitives than eForth - 20 vs. 31 - and at least 2 of those are not even strictly necessary
 * Compile-only Forth, with no `STATE` variable and no interpreter buffer
@@ -38,8 +38,11 @@ My hope for this project is that it will eventually become fully self-hosting, e
 
 ### Usage Notes:
 
+**Experimental:** The loader scripts can take care of some of this tedium. Run `./loader.sh files.lst` to run files in the order listed.
+
 * Compile with `make`
 * Run with, e.g., `cat input | ./core > output` or `cat input - | ./core`
 * Debug with `gdb core -ex 'r < <(cat input)'` and an `int3` assembled somewhere
   * Tip: Disassemble latest word with `x/10i $rsi+9+N` where *N* is the length of its name (i.e., `x/1c $rsi+8`)
 * Disassemble using `objdump -b binary -m i386:x86-64 -D core`
+

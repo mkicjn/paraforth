@@ -1,13 +1,9 @@
-ALL = core elf_demo
+ALL = core
 
 all: $(ALL)
 
 core: core.asm
 	fasm core.asm
-	chmod +x $@
-
-elf_demo: core stage*
-	cat stage* | ./core > $@
 	chmod +x $@
 
 .PHONY: clean

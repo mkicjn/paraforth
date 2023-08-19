@@ -1,0 +1,3 @@
+lexica/x86_64/asm.fth
+lexica/x86_64/prims.fth
+examples/elf_demo.fth

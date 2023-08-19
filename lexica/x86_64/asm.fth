@@ -80,6 +80,7 @@
 
 :! CMPQ   SWAP REX.W, $ 39 C, REG MODR/M, ;
 :! TESTQ  REX.W, $ 85 C, REG MODR/M, ;
+:! TESTQ$  REX.W, $ F7 C, SWAP $ 0 REG MODR/M, D, ;
 
 :! SETZB   $ 940F W, $ 0 REG MODR/M, ;
 :! SETEB   $ 940F W, $ 0 REG MODR/M, ;
