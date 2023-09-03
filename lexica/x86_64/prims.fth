@@ -75,10 +75,12 @@
 :! 2*  { RAX 1SHLQ } ;
 :! 2/  { RAX 1SARQ } ;
 :! NEGATE  { RAX NEGQ } ;
-:! *  { RDX MULQ  NIP } ;
-:! UM/MOD  { RBX RAX MOVQ  RAX RDX MOVQ  RDX RDX XORQ  RBX DIVQ } ;
 :! LSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHLQ  RCX POPQ  DROP } ;
 :! RSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHRQ  RCX POPQ  DROP } ;
+:! *     { RDX MULQ  NIP } ;
+:! /MOD  { RBX RAX MOVQ  RAX RDX MOVQ  RDX RDX XORQ  RBX DIVQ } ;
+:! /     { /MOD NIP } ;
+:! MOD   { /MOD DROP } ;
 
 \ Bitwise arithmetic
 :! INVERT  { RAX NOTQ } ;
@@ -192,7 +194,7 @@
 
 \ Unsigned decimal integer I/O
 :! #  $ 0 NAME COUNT  FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP LITERAL ;
-: .#  $ 0  BEGIN >R  # 10 UM/MOD  R> 1+  OVER 0= UNTIL  NIP  FOR  CHAR 0 + EMIT  NEXT ;
+: .#  $ 0  BEGIN >R  # 10 /MOD  R> 1+  OVER 0= UNTIL  NIP  FOR  CHAR 0 + EMIT  NEXT ;
 \ TODO Add signed decimal I/O
 
 \ Strings
