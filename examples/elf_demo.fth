@@ -4,7 +4,7 @@
 \ The generated binary does next to nothing, but the code is still useful as a sort of regression test.
 \ It might become more useful once bootstrapping is back on the radar (hoping to address usability first).
 
-: INLINE  HERE SWAP MOVE ;
+: INLINE  HERE SWAP CMOVE ;
 :! {  POSTPONE AHEAD  HERE ;
 :! }  HERE OVER -  ROT POSTPONE THEN  2LITERAL ;
 
@@ -28,7 +28,7 @@ VARIABLE ELF-HEADER
 :! DUMP-BINARY  UPDATE-SIZE  TARGET  TARGET FILESZ @  TYPE  BYE ;
 
 \ VARIABLE TARGET-DICT   [ $ 0 TARGET-DICT ! ]
-\ : TARGET-LINK  TARGET-DICT @ ,  HERE OVER C@ 1+ MOVE ;
+\ : TARGET-LINK  TARGET-DICT @ ,  HERE OVER C@ 1+ CMOVE ;
 
 [ HERE ELF-HEADER ! ]
 
@@ -72,7 +72,7 @@ VARIABLE ELF-HEADER
 \ Core words: DUP DROP SWAP + - LSHIFT RSHIFT C, DOCOL DOLIT BYE RX TX FIND NAME, :! ; NAME DIGIT $
 
 \ TODO Redefine :! to fit the slightly different dictionary structure of the target
-\ TODO Define {, }, and INLINE inside the target (which means redefining MOVE, etc.)
+\ TODO Define {, }, and INLINE inside the target (which means redefining CMOVE, etc.)
 :! DUP  { RDX PUSHQ  RDX RAX MOVQ } INLINE ;
 :! DROP  { RAX RDX MOVQ  RDX POPQ } INLINE ;
 :! 2DROP  { RAX POPQ  RDX POPQ } INLINE ;
