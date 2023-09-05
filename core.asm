@@ -343,8 +343,8 @@ find:
 	inc	ecx
 .loop:	test	rsi, rsi
 	jz	.done
-	; save next link
-	mov	rbx, [rsi]
+	; save link
+	mov	rbx, rsi
 	; compare strings
 	mov	rdi, rax
 	lea	rsi, [rsi+8]
@@ -352,7 +352,7 @@ find:
 	repe cmpsb
 	pop	rcx ; }
 	je	.done
-	mov	rsi, rbx
+	mov	rsi, [rbx]
 	jmp	.loop
 .done:	mov	rax, rsi
 	POPA	rcx, rdi, rsi

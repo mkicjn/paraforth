@@ -61,7 +61,12 @@
 :! ARRAY  CREATE ALLOT ;
 \ DOES> redefines the CREATEd word as immediate, giving the opportunity for some code generation.
 \ TODO Find workarounds for these differences. For DOES>, can probably place DOCOL after DOES>. What about CREATE?
+
 :! CONSTANT  CREATE , DOES> @ LITERAL ;
+[ $ 0 ] CONSTANT FALSE
+[ $ 1 ] CONSTANT TRUE
 [ $ 8 ] CONSTANT CELL
-:! VARIABLE  CREATE CELL ALLOT ;
+\ TODO  Move optimized x86-64 version somewhere else
 : CELLS  RAX [ $ 3 ] SHLQ$ ;
+
+:! VARIABLE  CREATE CELL ALLOT ;

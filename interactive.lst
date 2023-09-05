@@ -2,4 +2,5 @@ lexica/x86_64/asm.fth
 lexica/x86_64/prims.fth
 lexica/linux.fth
 lexica/common.fth
+lexica/repl.fth
 -
