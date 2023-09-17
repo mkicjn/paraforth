@@ -149,9 +149,10 @@
 \ Either way, this is arguably more powerful in some ways than what is offered in a typical Forth, since it can be arbitrarily nested in interesting ways.
 \ This approach also eliminates the need for a whole host of inconsistently-bracketed or state-aware words.
 
-:! EXECUTE  { RBX RAX MOVQ  DROP  RBX CALLQ } ;
 :! [ HERE ;
-:! ] POSTPONE ; DUP THERE DROP EXECUTE ;
+:! EXIT  POSTPONE ; ;
+:! EXECUTE  { RBX RAX MOVQ  DROP  RBX CALLQ } ;
+:! ] POSTPONE EXIT DUP THERE DROP EXECUTE ;
 
 \ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the core is.
 \ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and executed immediately themselves.
