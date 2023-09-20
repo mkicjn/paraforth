@@ -108,6 +108,7 @@
 \ System register manipulation
 :! HERE  { DUP  RAX RDI MOVQ } ;
 :! THERE  { RDI RAXXCHGQ } ; \ Useful for temporarily setting/resetting the data pointer
+:! BACK  { RDI RAX MOVQ  DROP } ; \ ^
 :! ALLOT  { RDI RAX ADDQ  DROP } ;
 :! SP@  { DUP  RAX RBP MOVQ } ;
 :! SP!  { RBP RAX MOVQ  DROP } ;
@@ -125,7 +126,7 @@
 :! AHEAD        HERE 1+     HERE { JMPL$ } ; \ Leave a forward reference on the stack
 :! IF     COND  HERE 1+ 1+  HERE { JZL$ } ;  \ Leave a conditional forward reference on the stack
 \ ^^ Note: AHEAD and IF can both cause infinite loops if not terminated - need to check for same stack depth when compiling later
-:! THEN  THERE  DUP REL32,  THERE DROP ; \ Resolve a forward reference (fill in a forward jump)
+:! THEN  THERE DUP REL32, BACK ; \ Resolve a forward reference (fill in a forward jump)
 :! ELSE  POSTPONE AHEAD  SWAP  POSTPONE THEN ; \ Leave a forward reference, then resolve an existing one
 :! WHILE  POSTPONE IF  SWAP ; \ Leave a forward reference on the stack under an existing (back) reference
 :! REPEAT  POSTPONE AGAIN  POSTPONE THEN ; \ Resolve a back reference, then resolve a forward reference
@@ -149,10 +150,10 @@
 \ Either way, this is arguably more powerful in some ways than what is offered in a typical Forth, since it can be arbitrarily nested in interesting ways.
 \ This approach also eliminates the need for a whole host of inconsistently-bracketed or state-aware words.
 
-:! [ HERE ;
+:! [  HERE ;
 :! EXIT  POSTPONE ; ;
 :! EXECUTE  { RBX RAX MOVQ  DROP  RBX CALLQ } ;
-:! ] POSTPONE EXIT DUP THERE DROP EXECUTE ;
+:! ]  POSTPONE EXIT  BACK  HERE EXECUTE ;
 
 \ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the core is.
 \ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and executed immediately themselves.

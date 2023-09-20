@@ -29,8 +29,8 @@
 :! ALONE  POSTPONE THEN LITERAL ;
 
 \ Strings
-: PARSE,  ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
-: PARSE  ( delim -- str cnt ) HERE SWAP PARSE, DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
+: PARSE,  ( DELIM -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
+: PARSE  ( DELIM -- STR CNT ) HERE SWAP PARSE, DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
 : 2LITERAL  SWAP LITERAL LITERAL ;
 :! S"  POSTPONE EMBED  CHAR " PARSE,  POSTPONE WITH-LENGTH ;
 \ TODO Check stack depth after definitions to ensure correctness.
@@ -53,7 +53,7 @@
 \ Data structures
 : DOCREATE  R> LITERAL ;
 : CREATE  POSTPONE :! POSTPONE DOCREATE ;
-: DODOES>  DP@ >XT THERE R> COMPILE THERE DROP ;
+: DODOES>  DP@ >XT  THERE R> COMPILE BACK ;
 :! DOES>  POSTPONE DODOES> POSTPONE R>  ;
 \ Since this is a compile-only Forth, CREATE and DOES> work a little differently.
 \ CREATE is not immediate, which means e.g. `CREATE _ 8 CELLS ALLOT` won't work.
@@ -70,3 +70,10 @@
 : CELLS  RAX [ $ 3 ] SHLQ$ ;
 
 :! VARIABLE  CREATE CELL ALLOT ;
+
+\ On/Off and conditional exit
+: ON   TRUE SWAP ! ;
+: OFF  FALSE SWAP ! ;
+: ON?   @ 0<> ;
+: OFF?  @ 0= ;
+: ?EXIT  IF RDROP THEN ;
