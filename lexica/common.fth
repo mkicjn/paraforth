@@ -33,7 +33,6 @@
 : PARSE  ( DELIM -- STR CNT ) HERE SWAP PARSE, DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
 : 2LITERAL  SWAP LITERAL LITERAL ;
 :! S"  POSTPONE EMBED  CHAR " PARSE,  POSTPONE WITH-LENGTH ;
-\ TODO Check stack depth after definitions to ensure correctness.
 \ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.
 :! ."  POSTPONE S"  POSTPONE TYPE ;
 

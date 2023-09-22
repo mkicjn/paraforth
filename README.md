@@ -5,11 +5,13 @@ _(This project is a slow work in progress.)_
 
 ### Roadmap:
 
-1. Produce a minimal subroutine-threaded Forth compiler capable of implementing an assembler. ***(FINISHED)***
-2. Implement a basic assembler using the compiler. ***(FINISHED, but some improvements planned)***
-3. Extend the existing Forth compiler in-place using the assembler. ***(NEARLY FINISHED)***
-4. Improve usability by providing a REPL with error handling, convenient launch scripts, and library code.
-5. Bootstrap the core and use the resulting system for other personal projects.
+1. Produce a minimal subroutine-threaded Forth compiler capable of implementing an assembler. ***(DONE)***
+2. Implement a basic assembler using the compiler. ***(DONE)***
+3. Extend the existing Forth compiler in-place using the assembler. ***(DONE)***
+4. Improve usability by providing a REPL with error handling, convenient launch scripts, and library code. ***(IN PROGRESS)***
+5. Bootstrap the core and use the resulting system for other pet projects.
+
+_(Anything marked done is still subject to improvements over time.)_
 
 ### Quirks and Features:
 
