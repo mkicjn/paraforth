@@ -15,7 +15,7 @@
 
 \ The main thing to point out before now is that there's a bit of a chicken-and-egg problem between COMPILE, POSTPONE, and CALLQ$.
 \ I chose to solve this by implementing COMPILE as a regular colon word, which implements a sort of "generalized DOCOL."
-\ TODO : Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
+\ TODO  Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
 
 \ DPOPQ and DPUSHQ are sort of pseudo-instructions, and the definitions of BEGIN and UNTIL are just temporary (but necessary) infrastructure.
 \ (Fun fact - BEGIN is just an immediate HERE)
@@ -29,11 +29,11 @@
 :! '  NAME FIND LITERAL ;
 :! }  ; \ just a no-op to compare against
 :! {  BEGIN  NAME FIND DUP COMPILE  ' } =  UNTIL ; \ Since we don't have WHILE and REPEAT, } gets postponed too - good thing it's a no-op.
-\ TODO : This is good enoough, but will break if } is ever redefined due to hyperstatic scoping - would prefer to avoid this, and stop compiling no-ops.
+\ TODO  This is good enoough, but will break if } is ever redefined due to hyperstatic scoping - would prefer to avoid this, and stop compiling no-ops.
 
 \ This makes it act as though the user typed all those words directly into their definition, since words always get executed immediately when typed.
 \ However, it won't work at all with words that parse input, because there's no way to save the input for later.
-\ TODO : This is much better than copying compiled code (which breaks relative offsets), but is there an elegant way to address this final limitation?
+\ TODO  This is much better than copying compiled code (which breaks relative offsets), but is there an elegant way to address this final limitation?
 
 \ Implementing the actual primitives is pretty straightforward and unexciting.
 \ See the notes in core.asm to understand the register convention.
@@ -90,36 +90,42 @@
 
 \ Comparisons
 \ The repeated MOVZXBLs are ugly, but it's easier than clearing RBX
-:! 0=  { RAX RAX TESTQ  RAX SETZB  RAX RAX MOVZXBL } ;
+:! 0=   { RAX RAX TESTQ  RAX SETZB   RAX RAX MOVZXBL } ;
 :! 0<>  { RAX RAX TESTQ  RAX SETNZB  RAX RAX MOVZXBL } ;
-:! 0<  { RAX RAX TESTQ  RAX SETLB  RAX RAX MOVZXBL } ;
-:! 0>  { RAX RAX TESTQ  RAX SETGB  RAX RAX MOVZXBL } ;
+:! 0<   { RAX RAX TESTQ  RAX SETLB   RAX RAX MOVZXBL } ;
+:! 0>   { RAX RAX TESTQ  RAX SETGB   RAX RAX MOVZXBL } ;
 :! 0<=  { RAX RAX TESTQ  RAX SETLEB  RAX RAX MOVZXBL } ;
 :! 0>=  { RAX RAX TESTQ  RAX SETGEB  RAX RAX MOVZXBL } ;
-:! =  { RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  NIP } ;
+:! =   { RAX RDX CMPQ  RAX SETEB   RAX RAX MOVZXBL  NIP } ;
 :! <>  { RAX RDX CMPQ  RAX SETNEB  RAX RAX MOVZXBL  NIP } ;
-:! <  { RAX RDX CMPQ  RAX SETLB  RAX RAX MOVZXBL  NIP } ;
-:! >  { RAX RDX CMPQ  RAX SETGB  RAX RAX MOVZXBL  NIP } ;
+:! <   { RAX RDX CMPQ  RAX SETLB   RAX RAX MOVZXBL  NIP } ;
+:! >   { RAX RDX CMPQ  RAX SETGB   RAX RAX MOVZXBL  NIP } ;
 :! <=  { RAX RDX CMPQ  RAX SETLEB  RAX RAX MOVZXBL  NIP } ;
 :! >=  { RAX RDX CMPQ  RAX SETGEB  RAX RAX MOVZXBL  NIP } ;
 :! MIN  { RAX RDX CMPQ  RAX RDX CMOVLQ  NIP } ;
 :! MAX  { RAX RDX CMPQ  RAX RDX CMOVGQ  NIP } ;
 
 \ System register manipulation
-:! HERE  { DUP  RAX RDI MOVQ } ;
+:! HERE   { DUP  RAX RDI MOVQ } ;
 :! THERE  { RDI RAXXCHGQ } ; \ Useful for temporarily setting/resetting the data pointer
-:! BACK  { RDI RAX MOVQ  DROP } ; \ ^
+:! BACK   { RDI RAX MOVQ  DROP } ; \ ^
 :! ALLOT  { RDI RAX ADDQ  DROP } ;
 :! SP@  { DUP  RAX RBP MOVQ } ;
-:! SP!  { RBP RAX MOVQ  DROP } ;
 :! RP@  { DUP  RAX RSP MOVQ } ;
-:! RP!  { RSP RAX MOVQ  DROP } ;
 :! DP@  { DUP  RAX RSI MOVQ } ;
+:! SP!  { RBP RAX MOVQ  DROP } ;
+:! RP!  { RSP RAX MOVQ  DROP } ;
 :! DP!  { RSI RAX MOVQ  DROP } ;
+
+\ Cell size operations
+:! CELL   $ 8 LITERAL ;
+:! CELLS  { RAX } $ 3 { SHLQ$ } ;
+:! CELL+  CELL { RAX ADDQ$ } ;
 
 \ Control structures
 : COND  { RBX RAX MOVQ  DROP  RBX RBX TESTQ } ; \ Compile code that sets flags based on top stack item
 \ ^ Note: Not immediate
+\ TODO  Include more basic branching primitives (the MARK/RESOLVE family)
 :! BEGIN  HERE ; \ Leave a back reference on the stack (redundant definition here only for completeness)
 :! AGAIN        { JMPL$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
 :! UNTIL  COND  { JZL$ } ;  \ Resolve a back reference on the stack with a conditional jump
@@ -137,7 +143,7 @@
 :! NEXT  { LOOP$  RCX POPQ } ;
 :! AFT  DROP  POSTPONE AHEAD  POSTPONE BEGIN  SWAP ;
 :! I  { DUP  RAX RCX MOVQ } ;
-\ TODO : Include DO, LOOP, +LOOP and LEAVE?
+\ TODO  Include counted loops? (DO, LOOP, +LOOP and LEAVE)
 
 \ "Interpreter"
 
@@ -146,7 +152,7 @@
 \ The obvious limitation this has is that it's possible to accidentally compile over the code while it executes.
 
 \ So far, though, this limitation seems difficult to run into by accident, and easy to work around if you do.
-\ TODO : There are obvious modifications to try if this ever does becomes an issue, but a general solution is not clear enough to implement right away.
+\ TODO  There are obvious modifications to try if this ever does becomes an issue, but a general solution is not clear enough to implement right away.
 \ Either way, this is arguably more powerful in some ways than what is offered in a typical Forth, since it can be arbitrarily nested in interesting ways.
 \ This approach also eliminates the need for a whole host of inconsistently-bracketed or state-aware words.
 

@@ -65,14 +65,14 @@ VARIABLE ELF-HEADER
 	$ 1000 , \ p_align
 ]
 
-\ TODO Since the calling convention will be different in the target, it will be challenging to bootstrap without wordlists.
+\ TODO  Since the calling convention will be different in the target, it will be challenging to bootstrap without wordlists.
 \ I think it should be fine as long as the host never executes the target's code, and vice versa.
 \ It would be preferable to keep things simple and avoid implementing wordlists if possible.
 
 \ Core words: DUP DROP SWAP + - LSHIFT RSHIFT C, DOCOL DOLIT BYE RX TX FIND NAME, :! ; NAME DIGIT $
 
-\ TODO Redefine :! to fit the slightly different dictionary structure of the target
-\ TODO Define {, }, and INLINE inside the target (which means redefining CMOVE, etc.)
+\ TODO  Redefine :! to fit the slightly different dictionary structure of the target
+\ TODO  Define {, }, and INLINE inside the target (which means redefining CMOVE, etc.)
 :! DUP  { RDX PUSHQ  RDX RAX MOVQ } INLINE ;
 :! DROP  { RAX RDX MOVQ  RDX POPQ } INLINE ;
 :! 2DROP  { RAX POPQ  RDX POPQ } INLINE ;
@@ -91,11 +91,11 @@ VARIABLE ELF-HEADER
 :! C@  { RAX RAX MOVZXB@ } INLINE ;
 :! C!  { RAX RDX MOVB!  2DROP } INLINE ;
 
-\ TODO fix: These definitions rely on references to words in the host (DOCOL, RAX, MOVQ$)
+\ TODO  Fix: These definitions rely on references to words in the host (DOCOL, RAX, MOVQ$)
 : DOCOL  R> POSTPONE CALLQ ;
 : DOLIT  POSTPONE DUP POSTPONE RAX SWAP POSTPONE MOVQ$ ;
 
-\ TODO Another problem: At some point, DEFER may be needed to handle forward references.
+\ TODO  Another problem: At some point, DEFER may be needed to handle forward references.
 \ It may be worth carefully selecting which words to DEFER for maximum utility later.
 
 :! START
