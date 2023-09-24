@@ -19,13 +19,12 @@
 
 \ Words for embedding data into code
 :! EMBED  POSTPONE AHEAD  HERE SWAP ;
-:! WITH-LENGTH  HERE SWAP  POSTPONE THEN  OVER LITERAL  SWAP - LITERAL ;
+:! WITH-LENGTH  HERE SWAP  POSTPONE THEN  OVER - 2LITERAL ;
 :! ALONE  POSTPONE THEN LITERAL ;
 
 \ Strings
 : PARSE,  ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
 : PARSE  ( delim -- str cnt ) HERE SWAP PARSE,  DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
-: 2LITERAL  SWAP LITERAL LITERAL ;
 :! S"  POSTPONE EMBED  CHAR " PARSE,  POSTPONE WITH-LENGTH ;
 \ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.
 :! ."  POSTPONE S"  POSTPONE TYPE ;

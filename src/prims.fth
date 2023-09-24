@@ -164,3 +164,6 @@
 \ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the core is.
 \ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and executed immediately themselves.
 \ This idea starts to feel like it's approaching some distillation of the concept of metaprogramming - can it be taken any further?
+
+\ Optimized 2LITERAL to reduce stack shuffling
+: 2LITERAL  { RDX DPUSHQ  RAX DPUSHQ  RAX } SWAP { MOVQ$  RDX } SWAP { MOVQ$ } ;
