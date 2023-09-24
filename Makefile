@@ -1,9 +1,9 @@
-ALL = core
+ALL = paraforth
 
 all: $(ALL)
 
-core: core.asm
-	fasm core.asm
+paraforth: src/core.asm
+	fasm $< $@
 	chmod +x $@
 
 .PHONY: clean

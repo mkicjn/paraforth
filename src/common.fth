@@ -23,12 +23,23 @@
 :! ALONE  POSTPONE THEN LITERAL ;
 
 \ Strings
-: PARSE,  ( DELIM -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
-: PARSE  ( DELIM -- STR CNT ) HERE SWAP PARSE,  DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
+: PARSE,  ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
+: PARSE  ( delim -- str cnt ) HERE SWAP PARSE,  DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
 : 2LITERAL  SWAP LITERAL LITERAL ;
 :! S"  POSTPONE EMBED  CHAR " PARSE,  POSTPONE WITH-LENGTH ;
 \ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.
 :! ."  POSTPONE S"  POSTPONE TYPE ;
+
+\ TODO  Find a good conditional compilation mechanism for supporting optimized versions of e.g. below
+: CMOVE  ( c-addr1 c-addr2 u -- )
+	\ TODO  Rewrite with DO..LOOP once implemented
+	BEGIN
+		DUP 0<>
+	WHILE >R
+		OVER C@ OVER C!
+		1+ SWAP 1+ SWAP
+	R> 1- REPEAT
+	DROP 2DROP ;
 
 \ Dictionary manipulation
 \ TODO  Move implementation-specific details elsewhere
