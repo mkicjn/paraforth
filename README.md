@@ -40,7 +40,7 @@ My hope for this project is that it will eventually become fully self-hosting, e
 
 ### Usage Notes:
 
-**Experimental:** The loader scripts can take care of some of this tedium. Run `./loader.sh files.lst` to run files in the order listed.
+**Experimental:** The loader script can take care of some of this tedium. Run `./loader.sh` for details.
 
 * Compile with `make`
 * Run with, e.g., `cat input | ./core > output` or `cat input - | ./core`
