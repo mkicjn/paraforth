@@ -106,16 +106,16 @@
 :! MAX  { RAX RDX CMPQ  RAX RDX CMOVGQ  NIP } ;
 
 \ System register manipulation
-:! HERE   { DUP  RAX RDI MOVQ } ;
-:! THERE  { RDI RAXXCHGQ } ; \ Useful for temporarily setting/resetting the data pointer
-:! BACK   { RDI RAX MOVQ  DROP } ; \ ^
+:! HERE   { DUP  RAX RDI MOVQ } ; \ data space pointer
+:! THERE  { RDI RAXXCHGQ } ;
+:! BACK   { RDI RAX MOVQ  DROP } ;
 :! ALLOT  { RDI RAX ADDQ  DROP } ;
-:! SP@  { DUP  RAX RBP MOVQ } ;
-:! RP@  { DUP  RAX RSP MOVQ } ;
-:! DP@  { DUP  RAX RSI MOVQ } ;
+:! SP@  { DUP  RAX RBP MOVQ } ; \ stack pointer
 :! SP!  { RBP RAX MOVQ  DROP } ;
+:! RP@  { DUP  RAX RSP MOVQ } ; \ return stack pointer
 :! RP!  { RSP RAX MOVQ  DROP } ;
-:! DP!  { RSI RAX MOVQ  DROP } ;
+:! LP@  { DUP  RAX RSI MOVQ } ; \ link pointer
+:! LP!  { RSI RAX MOVQ  DROP } ;
 
 \ Cell size operations
 :! CELL   $ 8 LITERAL ;

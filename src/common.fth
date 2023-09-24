@@ -11,6 +11,7 @@
 \ Character constants
 : CR  $ A EMIT ;
 :! BL  $ 20 LITERAL ;
+: SPACE  BL EMIT ;
 
 \ Unsigned decimal integer I/O
 :! #  $ 0 NAME COUNT  FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP LITERAL ;
@@ -18,14 +19,14 @@
 \ TODO  Add signed decimal I/O and hexadecimal output
 
 \ Words for embedding data into code
-:! EMBED  POSTPONE AHEAD  HERE SWAP ;
-:! WITH-LENGTH  HERE SWAP  POSTPONE THEN  OVER - 2LITERAL ;
-:! ALONE  POSTPONE THEN LITERAL ;
+: EMBED  POSTPONE AHEAD  HERE SWAP ;
+: WITH-LENGTH  HERE SWAP  POSTPONE THEN  OVER - 2LITERAL ;
+: ALONE  POSTPONE THEN LITERAL ;
 
 \ Strings
 : PARSE,  ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
 : PARSE  ( delim -- str cnt ) HERE SWAP PARSE,  DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
-:! S"  POSTPONE EMBED  CHAR " PARSE,  POSTPONE WITH-LENGTH ;
+:! S"  EMBED  CHAR " PARSE,  WITH-LENGTH ;
 \ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.
 :! ."  POSTPONE S"  POSTPONE TYPE ;
 
@@ -49,7 +50,7 @@
 \ Data structures
 : DOCREATE  R> LITERAL ;
 : CREATE  POSTPONE :! POSTPONE DOCREATE ;
-: DODOES>  DP@ >XT  THERE R> COMPILE BACK ;
+: DODOES>  LP@ >XT  THERE R> COMPILE BACK ;
 :! DOES>  POSTPONE DODOES> POSTPONE R>  ;
 \ Since this is a compile-only Forth, CREATE and DOES> work a little differently.
 \ CREATE is not immediate, which means e.g. `CREATE _ 8 CELLS ALLOT` won't work.
