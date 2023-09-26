@@ -24,28 +24,10 @@
 : ALONE  POSTPONE THEN LITERAL ;
 
 \ Strings
-: PARSE,  ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
+: PARSE, ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
 : PARSE  ( delim -- str cnt ) HERE SWAP PARSE,  DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
 :! S"  EMBED  CHAR " PARSE,  WITH-LENGTH ;
-\ Perhaps : can put the current stack pointer on the stack, and ; can try to check for it and QUIT if it fails to match.
 :! ."  POSTPONE S"  POSTPONE TYPE ;
-
-\ TODO  Find a good conditional compilation mechanism for supporting optimized versions of e.g. below
-: CMOVE  ( c-addr1 c-addr2 u -- )
-	\ TODO  Rewrite with DO..LOOP once implemented
-	BEGIN
-		DUP 0<>
-	WHILE >R
-		OVER C@ OVER C!
-		1+ SWAP 1+ SWAP
-	R> 1- REPEAT
-	DROP 2DROP ;
-
-\ Dictionary manipulation
-\ TODO  Move implementation-specific details elsewhere
-: >NAME  $ 8 + ; \ Skip 8 byte pointer
-: >XT  >NAME COUNT + ; \ Skip length of string
-: >BODY  >XT $ 5 + ; \ Skip length of call instruction
 
 \ Data structures
 : DOCREATE  R> LITERAL ;
@@ -74,3 +56,19 @@
 : ON?   @ 0<> ;
 : OFF?  @ 0= ;
 : ?EXIT  IF RDROP THEN ;
+
+\ TODO  Find a good conditional compilation mechanism for supporting optimized versions of e.g. below
+
+\ Dual string operations
+: CSTEP  SWAP 1+ SWAP 1+ ;
+: CCOPY  SWAP C@ SWAP C! ;
+: 2C@    SWAP C@ SWAP C@ ;
+\ Memory copying
+: CMOVE  FOR  2DUP CCOPY CSTEP  NEXT 2DROP ;
+\ Counted string comparisons
+: ?C=  2C@ = ?EXIT  RDROP UNLOOP ;
+: -MATCH  FOR  2DUP ?C= CSTEP  NEXT ; \ Find mismatch
+: CSTR=  DUP C@  -MATCH  2C@ = ;
+
+\ TODO  Implement COMPARE (reusing -MATCH)
+: SIGN  DUP 0<> IF  0> 2* 1-  THEN ;

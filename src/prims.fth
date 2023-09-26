@@ -1,3 +1,4 @@
+:! FIND  DOCOL  SEEK  $ 8 +  RBX RAX MOVZXB@  RAX RBX ADDQ  RAX INCQ ;
 :! POSTPONE  NAME FIND COMPILE ;
 :! :  POSTPONE :! POSTPONE DOCOL ;
 
@@ -13,7 +14,7 @@
 
 \ Now that comments are supported, documentation for the high-level stuff can begin.
 
-\ The main thing to point out before now is that there's a bit of a chicken-and-egg problem between COMPILE, POSTPONE, and CALLQ$.
+\ The main thing to point out before now is that there's a bit of a chicken-and-egg problem between COMPILE, POSTPONE, and CALL$.
 \ I chose to solve this by implementing COMPILE as a regular colon word, which implements a sort of "generalized DOCOL."
 \ TODO  Maybe there's a neat trick to avoid that. I would have preferred to keep ALL high level definitions in this file, but it seemed unavoidable.
 
@@ -65,7 +66,7 @@
 :! 2>R  { RDX PUSHQ  RAX PUSHQ  2DROP } ;
 :! 2R>  { 2DUP  RDX POPQ  RAX POPQ } ;
 :! R@  { DUP  RAX (SIB) MOVQ@  RSP (NONE) R*1 SIB, } ;
-:! RDROP  $ 8 { RSP ADDQ$ } ;
+:! RDROP  { RSP } $ 8 { ADDQ$ } ;
 
 \ Basic arithmetic
 :! +  { RAX RDX ADDQ  NIP } ;
@@ -138,11 +139,15 @@
 :! REPEAT  POSTPONE AGAIN  POSTPONE THEN ; \ Resolve a back reference, then resolve a forward reference
 
 \ Definite loops
-\ Note: FOR..NEXT only supports 256 byte bodies due to rel8 encoding
+\ Notes:
+\ * FOR..NEXT only supports 256 byte bodies due to rel8 encoding
+\ * N FOR.. will iterate from N-1 to 0 to support more common use cases (in a normal Forth this requires AFT)
+\   * In case it becomes useful - :! AFT  DROP  POSTPONE AHEAD  POSTPONE BEGIN  SWAP ;
 :! FOR  { RCX PUSHQ  RCX RAX MOVQ  DROP } HERE ;
 :! NEXT  { LOOP$  RCX POPQ } ;
-:! AFT  DROP  POSTPONE AHEAD  POSTPONE BEGIN  SWAP ;
-:! I  { DUP  RAX RCX MOVQ } ;
+:! I  { DUP  RAX RCX MOVQ  RAX DECQ } ;
+:! UNLOOP  { RCX POPQ } ;
+
 \ TODO  Include counted loops? (DO, LOOP, +LOOP and LEAVE)
 
 \ "Interpreter"
@@ -158,7 +163,8 @@
 
 :! [  HERE ;
 :! EXIT  POSTPONE ; ;
-:! EXECUTE  { RBX RAX MOVQ  DROP  RBX CALLQ } ;
+:! EXECUTE  { RBX RAX MOVQ  DROP  RBX CALL } ;
+:! JUMP     { RBX RAX MOVQ  DROP  RBX JMP } ;
 :! ]  POSTPONE EXIT  BACK  HERE EXECUTE ;
 
 \ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the core is.
@@ -167,3 +173,8 @@
 
 \ Optimized 2LITERAL to reduce stack shuffling
 : 2LITERAL  { RDX DPUSHQ  RAX DPUSHQ  RAX } SWAP { MOVQ$  RDX } SWAP { MOVQ$ } ;
+
+\ Implementation-specific dictionary link manipulation
+: >NAME  $ 8 + ; \ Skip 8 byte pointer
+: >XT    >NAME DUP C@ + 1+ ; \ Skip length of string
+: >BODY  >XT $ 5 + ; \ Skip length of call instruction

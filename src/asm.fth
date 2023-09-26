@@ -56,8 +56,8 @@
 :! RAXXCHGQ  REX.W, $ 90 + C, ;
 
 :! COMPILE  DOCOL  $ E8 C, REL32, ;
-:! CALLQ$  COMPILE ;
-:! CALLQ  $ FF C, $ 2 REG MODR/M, ;
+:! CALL$  COMPILE ;
+:! CALL  $ FF C, $ 2 REG MODR/M, ;
 
 :! PUSHQ  $ 50 + C, ;
 :! POPQ   $ 58 + C, ;

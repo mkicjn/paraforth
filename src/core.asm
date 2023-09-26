@@ -67,8 +67,9 @@ start:
 	lea	rbp, [space]
 	mov	rdi, rbp
 .repl:	call	name
-	call	find
-	mov	rbx, rax
+	call	seek
+	movzx	rbx, byte [rax+8]
+	lea	rbx, [rax+rbx+9]
 	call	drop
 	call	rbx
 	jmp	.repl
@@ -330,9 +331,9 @@ hex:
 ;
 ; These words facilitate dictionary lookups and the creation of new definitions.
 
-link "FIND"
+link "SEEK"
 	call	docol
-find:
+seek:
 	; rax: counted string
 	; rsi: latest link
 	; rax = xt or null
@@ -341,10 +342,9 @@ find:
 	; load search string length
 	movzx	ecx, byte [rax]
 	inc	ecx
-.loop:	test	rsi, rsi
+.loop:	mov	rbx, rsi
+	test	rbx, rbx
 	jz	.done
-	; save link
-	mov	rbx, rsi
 	; compare strings
 	mov	rdi, rax
 	lea	rsi, [rsi+8]
@@ -354,7 +354,7 @@ find:
 	je	.done
 	mov	rsi, [rbx]
 	jmp	.loop
-.done:	mov	rax, rsi
+.done:	mov	rax, rbx
 	POPA	rcx, rdi, rsi
 	ret
 

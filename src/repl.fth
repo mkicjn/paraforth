@@ -6,6 +6,8 @@ VARIABLE 'QUIT
 : ?UNSTRUCTURED  DUP ' ; =  SP@ S0 $ 3 CELLS - <>  AND  IF ." UNSTRUCTURED" CR QUIT THEN ;
 : ?UNDERFLOW  SP@ S0 >  IF ." UNDERFLOW" CR QUIT THEN ;
 
+\ TODO  Safer redefinitions of all words that search the wordlist
+
 :! (QUIT)  S0 SP! R0 RP!
 	POSTPONE \
 	BEGIN NAME DUP FIND
@@ -24,5 +26,5 @@ VARIABLE 'QUIT
 :! MARKER  CREATE LP@ , DOES>  @ LP! POSTPONE UNDO ;
 :! WORDS  LP@ BEGIN DUP 0<> WHILE  DUP >NAME COUNT TYPE SPACE  @ REPEAT  DROP  CR ;
 
-\ TODO  FORGET (consider changing dictionary structure), HOOK, DEFER/IS or DOER/MAKE, and a DEBUG word, .S
+\ TODO  FORGET (consider changing dictionary structure), HIDE, HOOK, DEFER/IS or DOER/MAKE, a DEBUG word, .S
 \ Flawed definition : .S  BEGIN SP@ S0 < WHILE .# BL EMIT REPEAT ;
