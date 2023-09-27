@@ -1,22 +1,22 @@
-:! FIND  DOCOL  SEEK  $ 8 +  RBX RAX MOVZXB@  RAX RBX ADDQ  RAX INCQ ;
-:! POSTPONE  NAME FIND COMPILE ;
-:! :  POSTPONE :! POSTPONE DOCOL ;
+:! find  docol  seek  $ 8 +  rbx rax movzxb@  rax rbx addq  rax incq ;
+:! postpone  name find compile ;
+:! :  postpone :! postpone docol ;
 
-: COND  RBX RAX MOVQ  DROP  RBX RBX TESTQ ;
-:! BEGIN  DUP  RAX RDI MOVQ ;
-:! UNTIL  POSTPONE COND POSTPONE JZ$ ;
+: cond  rbx rax movq  drop  rbx rbx testq ;
+:! begin  dup  rax rdi movq ;
+:! until  postpone cond postpone jz$ ;
 
-: =  RAX RDX CMPQ  RAX SETEB  RAX RAX MOVZXBL  SWAP DROP ;
-:! \  BEGIN  KEY $ A =  UNTIL ;
+: =  rax rdx cmpq  rax seteb  rax rax movzxbl  swap drop ;
+:! \  begin  key $ a =  until ;
 
 
 \ Now that comments are supported, documentation for the high-level stuff can begin.
 
-\ The main thing to point out before now is that there's a bit of a chicken-and-egg problem between COMPILE, POSTPONE, and CALL$.
-\ I chose to solve this by implementing COMPILE as a regular colon word, which implements a sort of "generalized DOCOL."
+\ The main thing to point out before now is that there's a bit of a chicken-and-egg problem between compile, postpone, and call$.
+\ I chose to solve this by implementing compile as a regular colon word, which implements a sort of "generalized docol."
 \ Most of the above definitions in this file are just temporary infrastructure and will be redefined later.
 
-\ TODO  Maybe there are some neat tricks to avoid some of these. I would prefer to keep ALL high level definitions in this file, and reduce those above this line.
+\ TODO  Maybe there are some neat tricks to avoid some of these. I would prefer to keep all high level definitions in this file, and reduce those above this line.
 
 
 \ Inlining
@@ -26,10 +26,10 @@
 
 \ Inlining can be implemented easily enough by creating a parsing word that postpones every word entered after it until it hits an "end" word.
 \ I choose braces for this syntax because it's the conceptual opposite of what brackets would represent in a typical Forth.
-: LITERAL  DOLIT , ;
-:! '  NAME FIND LITERAL ;
+: literal  dolit , ;
+:! '  name find literal ;
 :! }  ; \ just a no-op to compare against
-:! {  BEGIN  NAME FIND DUP COMPILE  ' } =  UNTIL ; \ Since we don't have WHILE and REPEAT, } gets postponed too - good thing it's a no-op.
+:! {  begin  name find dup compile  ' } =  until ; \ Since we don't have while and repeat, } gets postponed too - good thing it's a no-op.
 
 \ This makes it act as though the user typed all those words directly into their definition, since words always get executed immediately when typed.
 \ However, it won't work at all with words that parse input, because there's no way to save the input for later.
@@ -40,130 +40,130 @@
 \ See the notes in core.asm to understand the register convention.
 \ (Note that some operations are redefined to allow for a more optimized inlining implementation)
 
-\ DPOPQ and DPUSHQ are pseudo-instructions corresponding to the data stack
-:! DPOPQ   { RBPMOVQ@  RBP } $ 8 { ADDQ$ } ;
-:! DPUSHQ  { RBP } $ 8 { SUBQ$  RBPMOVQ! } ;
+\ dpopq and dpushq are pseudo-instructions corresponding to the data stack
+:! dpopq   { rbpmovq@  rbp } $ 8 { addq$ } ;
+:! dpushq  { rbp } $ 8 { subq$  rbpmovq! } ;
 
 \ Stack manipulation
-:! DUP  { RDX DPUSHQ  RDX RAX MOVQ } ;
-:! DROP  { RAX RDX MOVQ  RDX DPOPQ } ;
-:! SWAP  { RDX RAXXCHGQ } ;
-:! NIP  { RDX DPOPQ } ;
-:! TUCK  { RAX DPUSHQ } ;
-:! OVER  { SWAP TUCK } ;
-:! ROT  { RBX DPOPQ  DUP  RAX RBX MOVQ } ;
-:! -ROT  { RBX RAX MOVQ  DROP  RBX DPUSHQ } ;
-:! 2DUP  { RDX DPUSHQ  RAX DPUSHQ } ;
-:! 2DROP  { RAX DPOPQ  RDX DPOPQ } ;
+:! dup  { rdx dpushq  rdx rax movq } ;
+:! drop  { rax rdx movq  rdx dpopq } ;
+:! swap  { rdx raxxchgq } ;
+:! nip  { rdx dpopq } ;
+:! tuck  { rax dpushq } ;
+:! over  { swap tuck } ;
+:! rot  { rbx dpopq  dup  rax rbx movq } ;
+:! -rot  { rbx rax movq  drop  rbx dpushq } ;
+:! 2dup  { rdx dpushq  rax dpushq } ;
+:! 2drop  { rax dpopq  rdx dpopq } ;
 
 \ Memory operations
-:! @  { RAX RAX MOVQ@ } ;
-:! !  { RAX RDX MOVQ!  2DROP } ;
-:! C@  { RAX RAX MOVZXB@ } ;
-:! C!  { RAX RDX MOVB!  2DROP } ;
-:! ,   { STOSQ  DROP } ;
-:! C,  { STOSB  DROP } ;
+:! @  { rax rax movq@ } ;
+:! !  { rax rdx movq!  2drop } ;
+:! c@  { rax rax movzxb@ } ;
+:! c!  { rax rdx movb!  2drop } ;
+:! ,   { stosq  drop } ;
+:! c,  { stosb  drop } ;
 
 \ Return stack operations
-:! >R  { RAX PUSHQ  DROP } ;
-:! R>  { DUP  RAX POPQ } ;
-:! 2>R  { RDX PUSHQ  RAX PUSHQ  2DROP } ;
-:! 2R>  { 2DUP  RDX POPQ  RAX POPQ } ;
-:! R@  { DUP  RAX (SIB) MOVQ@  RSP (NONE) R*1 SIB, } ;
-:! RDROP  { RSP } $ 8 { ADDQ$ } ;
+:! >r  { rax pushq  drop } ;
+:! r>  { dup  rax popq } ;
+:! 2>r  { rdx pushq  rax pushq  2drop } ;
+:! 2r>  { 2dup  rdx popq  rax popq } ;
+:! r@  { dup  rax (sib) movq@  rsp (none) r*1 sib, } ;
+:! rdrop  { rsp } $ 8 { addq$ } ;
 
 \ Basic arithmetic
-:! +  { RAX RDX ADDQ  NIP } ;
-:! -  { RDX RAX SUBQ  DROP } ;
-:! 1+  { RAX INCQ } ;
-:! 1-  { RAX DECQ } ;
-:! 2*  { RAX 1SHLQ } ;
-:! 2/  { RAX 1SARQ } ;
-:! NEGATE  { RAX NEGQ } ;
-:! LSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHLQ  RCX POPQ  DROP } ;
-:! RSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHRQ  RCX POPQ  DROP } ;
-:! *     { RDX MULQ  NIP } ;
-:! /MOD  { RBX RAX MOVQ  RAX RDX MOVQ  RDX RDX XORQ  RBX DIVQ } ;
-:! /     { /MOD NIP } ;
-:! MOD   { /MOD DROP } ;
+:! +  { rax rdx addq  nip } ;
+:! -  { rdx rax subq  drop } ;
+:! 1+  { rax incq } ;
+:! 1-  { rax decq } ;
+:! 2*  { rax 1shlq } ;
+:! 2/  { rax 1sarq } ;
+:! negate  { rax negq } ;
+:! lshift  { rcx pushq  rcx rax movq  rdx clshlq  rcx popq  drop } ;
+:! rshift  { rcx pushq  rcx rax movq  rdx clshrq  rcx popq  drop } ;
+:! *     { rdx mulq  nip } ;
+:! /mod  { rbx rax movq  rax rdx movq  rdx rdx xorq  rbx divq } ;
+:! /     { /mod nip } ;
+:! mod   { /mod drop } ;
 
 \ Bitwise arithmetic
-:! INVERT  { RAX NOTQ } ;
-:! AND  { RAX RDX ANDQ  NIP } ;
-:! OR  { RAX RDX ORQ  NIP } ;
-:! XOR  { RAX RDX XORQ  NIP } ;
+:! invert  { rax notq } ;
+:! and  { rax rdx andq  nip } ;
+:! or  { rax rdx orq  nip } ;
+:! xor  { rax rdx xorq  nip } ;
 
 \ Comparisons
-\ The repeated MOVZXBLs are ugly, but it's easier than clearing RBX
-:! 0=   { RAX RAX TESTQ  RAX SETZB   RAX RAX MOVZXBL } ;
-:! 0<>  { RAX RAX TESTQ  RAX SETNZB  RAX RAX MOVZXBL } ;
-:! 0<   { RAX RAX TESTQ  RAX SETLB   RAX RAX MOVZXBL } ;
-:! 0>   { RAX RAX TESTQ  RAX SETGB   RAX RAX MOVZXBL } ;
-:! 0<=  { RAX RAX TESTQ  RAX SETLEB  RAX RAX MOVZXBL } ;
-:! 0>=  { RAX RAX TESTQ  RAX SETGEB  RAX RAX MOVZXBL } ;
-:! =   { RAX RDX CMPQ  RAX SETEB   RAX RAX MOVZXBL  NIP } ;
-:! <>  { RAX RDX CMPQ  RAX SETNEB  RAX RAX MOVZXBL  NIP } ;
-:! <   { RAX RDX CMPQ  RAX SETLB   RAX RAX MOVZXBL  NIP } ;
-:! >   { RAX RDX CMPQ  RAX SETGB   RAX RAX MOVZXBL  NIP } ;
-:! <=  { RAX RDX CMPQ  RAX SETLEB  RAX RAX MOVZXBL  NIP } ;
-:! >=  { RAX RDX CMPQ  RAX SETGEB  RAX RAX MOVZXBL  NIP } ;
-:! MIN  { RAX RDX CMPQ  RAX RDX CMOVLQ  NIP } ;
-:! MAX  { RAX RDX CMPQ  RAX RDX CMOVGQ  NIP } ;
+\ The repeated MOVZXBLs are ugly, but it's easier than clearing rbx
+:! 0=   { rax rax testq  rax setzb   rax rax movzxbl } ;
+:! 0<>  { rax rax testq  rax setnzb  rax rax movzxbl } ;
+:! 0<   { rax rax testq  rax setlb   rax rax movzxbl } ;
+:! 0>   { rax rax testq  rax setgb   rax rax movzxbl } ;
+:! 0<=  { rax rax testq  rax setleb  rax rax movzxbl } ;
+:! 0>=  { rax rax testq  rax setgeb  rax rax movzxbl } ;
+:! =   { rax rdx cmpq  rax seteb   rax rax movzxbl  nip } ;
+:! <>  { rax rdx cmpq  rax setneb  rax rax movzxbl  nip } ;
+:! <   { rax rdx cmpq  rax setlb   rax rax movzxbl  nip } ;
+:! >   { rax rdx cmpq  rax setgb   rax rax movzxbl  nip } ;
+:! <=  { rax rdx cmpq  rax setleb  rax rax movzxbl  nip } ;
+:! >=  { rax rdx cmpq  rax setgeb  rax rax movzxbl  nip } ;
+:! min  { rax rdx cmpq  rax rdx cmovlq  nip } ;
+:! max  { rax rdx cmpq  rax rdx cmovgq  nip } ;
 
 \ System register manipulation
-:! HERE   { DUP  RAX RDI MOVQ } ; \ data space pointer
-:! THERE  { RDI RAXXCHGQ } ;
-:! BACK   { RDI RAX MOVQ  DROP } ;
-:! ALLOT  { RDI RAX ADDQ  DROP } ;
-:! SP@  { DUP  RAX RBP MOVQ } ; \ stack pointer
-:! SP!  { RBP RAX MOVQ  DROP } ;
-:! RP@  { DUP  RAX RSP MOVQ } ; \ return stack pointer
-:! RP!  { RSP RAX MOVQ  DROP } ;
-:! LP@  { DUP  RAX RSI MOVQ } ; \ link pointer
-:! LP!  { RSI RAX MOVQ  DROP } ;
+:! here   { dup  rax rdi movq } ; \ data space pointer
+:! there  { rdi raxxchgq } ;
+:! back   { rdi rax movq  drop } ;
+:! allot  { rdi rax addq  drop } ;
+:! sp@  { dup  rax rbp movq } ; \ stack pointer
+:! sp!  { rbp rax movq  drop } ;
+:! rp@  { dup  rax rsp movq } ; \ return stack pointer
+:! rp!  { rsp rax movq  drop } ;
+:! lp@  { dup  rax rsi movq } ; \ link pointer
+:! lp!  { rsi rax movq  drop } ;
 
-\ Optimized 2LITERAL to reduce stack shuffling
-: 2LITERAL  { RDX DPUSHQ  RAX DPUSHQ  RAX } SWAP { MOVQ$  RDX } SWAP { MOVQ$ } ;
+\ Optimized 2literal to reduce stack shuffling
+: 2literal  { rdx dpushq  rax dpushq  rax } swap { movq$  rdx } swap { movq$ } ;
 
 \ Constants for machine-specific fixed widths
 
 \ Cell size operations
-:! CELL   $ 8 LITERAL ; \ Length of a machine register
-:! CELLS  { RAX } $ 3 { SHLQ$ } ;
-:! CELL+  { RAX } CELL { ADDQ$ } ;
+:! cell   $ 8 literal ; \ Length of a machine register
+:! cells  { rax } $ 3 { shlq$ } ;
+:! cell+  { rax } cell { addq$ } ;
 
 \ Dictionary link manipulation (included here because it is an implementation-specific detail)
-:! /CALL  $ 5 LITERAL ; \ Length of a call instruction
-: >NAME  CELL+ ; \ Skip next link pointer
-: >XT    >NAME DUP C@ + 1+ ; \ Skip pointer + counted string name
-: >BODY  >XT /CALL + ; \ Skip pointer, name, and first call instruction
+:! /call  $ 5 literal ; \ Length of a call instruction
+: >name  cell+ ; \ Skip next link pointer
+: >xt    >name dup c@ + 1+ ; \ Skip pointer + counted string name
+: >body  >xt /call + ; \ Skip pointer, name, and first call instruction
 
 \ Control structures
 
-: COND  { RBX RAX MOVQ  DROP  RBX RBX TESTQ } ; \ Compile code that sets flags based on top stack item
+: cond  { rbx rax movq  drop  rbx rbx testq } ; \ Compile code that sets flags based on top stack item
 \ ^ Note: Not immediate
-\ TODO  Consider bundling more basic branching primitives (the MARK/RESOLVE family) for use with inline assembly and define these in terms of those
-:! BEGIN  HERE ; \ Leave a back reference on the stack (redundant definition here only for completeness)
-:! AGAIN        { JMPL$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
-:! UNTIL  COND  { JZL$ } ;  \ Resolve a back reference on the stack with a conditional jump
-:! AHEAD        $ 0 { JMPL$ }  HERE $ 4 - ; \ Leave a forward reference on the stack
-:! IF     COND  $ 0 { JZL$ }   HERE $ 4 - ;  \ Leave a conditional forward reference on the stack
-:! THEN  THERE DUP REL32, BACK ; \ Resolve a forward reference (fill in a forward jump)
-:! ELSE  POSTPONE AHEAD  SWAP  POSTPONE THEN ; \ Leave a forward reference, then resolve an existing one
-:! WHILE  POSTPONE IF  SWAP ; \ Leave a forward reference on the stack under an existing (back) reference
-:! REPEAT  POSTPONE AGAIN  POSTPONE THEN ; \ Resolve a back reference, then resolve a forward reference
+\ TODO  Consider bundling more basic branching primitives (the mark/resolve family) for use with inline assembly and define these in terms of those
+:! begin  here ; \ Leave a back reference on the stack (redundant definition here only for completeness)
+:! again        { jmpl$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
+:! until  cond  { jzl$ } ;  \ Resolve a back reference on the stack with a conditional jump
+:! ahead        $ 0 { jmpl$ }  here $ 4 - ; \ Leave a forward reference on the stack
+:! if     cond  $ 0 { jzl$ }   here $ 4 - ;  \ Leave a conditional forward reference on the stack
+:! then  there dup rel32, back ; \ Resolve a forward reference (fill in a forward jump)
+:! else  postpone ahead  swap  postpone then ; \ Leave a forward reference, then resolve an existing one
+:! while  postpone if  swap ; \ Leave a forward reference on the stack under an existing (back) reference
+:! repeat  postpone again  postpone then ; \ Resolve a back reference, then resolve a forward reference
 
 \ Definite loops
 \ Notes:
-\ * FOR..NEXT only supports 256 byte bodies due to rel8 encoding
-\ * N FOR.. will iterate I from N-1 to 0 to support more common use cases (in a normal Forth this requires AFT)
-\   * In case it becomes useful - :! AFT  DROP  POSTPONE AHEAD  POSTPONE BEGIN  SWAP ;
-:! FOR  { RCX PUSHQ  RCX RAX MOVQ  DROP } HERE ;
-:! NEXT  { LOOP$  RCX POPQ } ;
-:! I  { DUP  RAX RCX MOVQ  RAX DECQ } ; \ Decrement since x86 likes its loop counters from N..1 instead of N-1..0
-:! UNLOOP  { RCX POPQ } ;
+\ * for..next only supports 256 byte bodies due to rel8 encoding
+\ * n for.. will iterate i from n-1 to 0 to support more common use cases (in a normal Forth this requires aft)
+\   * In case it becomes useful - :! aft  drop  postpone ahead  postpone begin  swap ;
+:! for  { rcx pushq  rcx rax movq  drop } here ;
+:! next  { loop$  rcx popq } ;
+:! i  { dup  rax rcx movq  rax decq } ; \ Decrement since x86 likes its loop counters from n..1 instead of n-1..0
+:! unloop  { rcx popq } ;
 
-\ TODO  Include counted loops? (DO, LOOP, +LOOP and LEAVE)
+\ TODO  Include counted loops? (do, loop, +loop and leave)
 
 
 \ "Interpreter"
@@ -177,11 +177,11 @@
 \ Either way, this is arguably more powerful in some ways than what is offered in a typical Forth, since it can be arbitrarily nested in interesting ways.
 \ This approach also eliminates the need for a whole host of inconsistently-bracketed or state-aware words.
 
-:! [  HERE ;
-:! EXIT  POSTPONE ; ;
-:! EXECUTE  { RBX RAX MOVQ  DROP  RBX CALL } ;
-:! JUMP     { RBX RAX MOVQ  DROP  RBX JMP } ; \ Included as a no-return alternative to EXECUTE
-:! ]  POSTPONE EXIT  BACK  HERE EXECUTE ;
+:! [  here ;
+:! exit  postpone ; ;
+:! execute  { rbx rax movq  drop  rbx call } ;
+:! jump     { rbx rax movq  drop  rbx jmp } ; \ Included as a no-return alternative to execute
+:! ]  postpone exit  back  here execute ;
 
 \ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the core is.
 \ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and executed immediately themselves.

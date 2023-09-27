@@ -1,31 +1,31 @@
 \ TODO  Unfinished
-VARIABLE 'QUIT
-: QUIT  'QUIT @ EXECUTE ;
+variable 'quit
+: quit  'quit @ execute ;
 
-: ?NOT-FOUND  DUP 0=  IF OVER COUNT TYPE CHAR ? EMIT CR QUIT THEN ;
-: ?UNSTRUCTURED  DUP ' ; =  SP@ S0 $ 3 CELLS - <>  AND  IF ." UNSTRUCTURED" CR QUIT THEN ;
-: ?UNDERFLOW  SP@ S0 >  IF ." UNDERFLOW" CR QUIT THEN ;
+: ?not-found  dup 0=  if over count type char ? emit cr quit then ;
+: ?unstructured  dup ' ; =  sp@ s0 $ 3 cells - <>  and  if ." unstructured" cr quit then ;
+: ?underflow  sp@ s0 >  if ." underflow" cr quit then ;
 
-: FIND  SEEK DUP IF >XT THEN ;
+: find  seek dup if >xt then ;
 \ TODO  Safer redefinitions of all words that search the wordlist
 
-:! (QUIT)  S0 SP! R0 RP!
-	POSTPONE \
-	BEGIN NAME DUP FIND
+:! (quit)  s0 sp! r0 rp!
+	postpone \
+	begin name dup find
 		( cstr xt )
-		?NOT-FOUND
-		?UNSTRUCTURED
-		NIP EXECUTE
+		?not-found
+		?unstructured
+		nip execute
 		( n*x )
-		?UNDERFLOW
-	AGAIN ;
+		?underflow
+	again ;
 
-[ ' (QUIT) 'QUIT !  QUIT ]
+[ ' (quit) 'quit !  quit ]
 
 \ TODO  Move to other source code file, or include debug utilities in this file?
-:! UNDO  LP@ BACK  LP@ @ LP! ;
-:! MARKER  CREATE LP@ , DOES>  @ LP! POSTPONE UNDO ;
-:! WORDS  LP@ BEGIN DUP 0<> WHILE  DUP >NAME COUNT TYPE SPACE  @ REPEAT  DROP  CR ;
+:! undo  lp@ back  lp@ @ lp! ;
+:! marker  create lp@ , does>  @ lp! postpone undo ;
+:! words  lp@ begin dup 0<> while  dup >name count type space  @ repeat  drop  cr ;
 
-\ TODO  FORGET (consider changing dictionary structure), HIDE, HOOK, DEFER/IS or DOER/MAKE, a DEBUG word, .S
-\ Flawed definition : .S  BEGIN SP@ S0 < WHILE .# BL EMIT REPEAT ;
+\ TODO  forget (consider changing dictionary structure), hide, hook, defer/is or doer/make, a debug word, and .s
+\ Flawed definition : .s  begin sp@ s0 < while .# bl emit repeat ;

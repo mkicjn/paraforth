@@ -1,3 +1,3 @@
 \ Words using Linux system calls
 
-: BYE  RDI RAX MOVQ  RAX [ $ 3C ] MOVQ$  SYSCALL ;
+: bye  rdi rax movq  rax [ $ 3c ] movq$  syscall ;

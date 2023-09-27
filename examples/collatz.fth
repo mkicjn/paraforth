@@ -1,5 +1,5 @@
-: COLLATZ-STEP  DUP $ 1 AND  IF  DUP 2* + 1+  ELSE  2/  THEN ;
-: COLLATZ-LEN   $ 0 SWAP BEGIN  DUP $ 1 > WHILE  COLLATZ-STEP  SWAP 1+ SWAP REPEAT DROP ;
-: MAX-COLLATZ   $ 0 SWAP FOR  I COLLATZ-LEN MAX  NEXT ;
+: collatz-step  dup $ 1 and  if  dup 2* + 1+  else  2/  then ;
+: collatz-len   $ 0 swap begin  dup $ 1 > while  collatz-step  swap 1+ swap repeat drop ;
+: max-collatz   $ 0 swap for  i collatz-len max  next ;
 
-[ # 1000000 MAX-COLLATZ .# CR BYE ]
+[ # 1000000 max-collatz .# cr bye ]

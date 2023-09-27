@@ -117,7 +117,7 @@ next:
 ;
 ; Combined, this has the effect of "postponing" the rest of the word following the call to DOCOL.
 
-link "DOCOL"
+link "docol"
 	call	docol
 docol: ; ^ Self-application
 	pop	rbx
@@ -129,7 +129,7 @@ docol: ; ^ Self-application
 
 ; `DOLIT` is conceptually simpler but compiles much more code. It inlines `DUP` and compiles `movabs rax`, to be followed by a quadword.
 
-link "DOLIT"
+link "dolit"
 	call	docol
 dolit:
 	mov	dword [rdi],   0xf86d8d48 ; lea rbp, [rbp-8]
@@ -157,13 +157,13 @@ semi:
 
 ; System interface primitives:
 
-link "KEY"
+link "key"
 	call	docol
 key:
 	call	dup_
 	jmp	sys_rx
 
-link "EMIT"
+link "emit"
 	call	docol
 emit:
 	call	sys_tx
@@ -171,21 +171,21 @@ emit:
 
 ; Stack primitives:
 
-link "DUP"
+link "dup"
 	call	docol
 dup_:
 	DPUSH	rdx
 	mov	rdx, rax
 	ret
 
-link "DROP"
+link "drop"
 	call	docol
 drop:
 	mov	rax, rdx
 	DPOP	rdx
 	ret
 
-link "SWAP"
+link "swap"
 	call	docol
 swap:
 	xchg	rax, rdx
@@ -206,7 +206,7 @@ minus:
 	sub	rdx, rax
 	jmp	drop
 
-link "LSHIFT"
+link "lshift"
 	call	docol
 lshift:
 	mov	rbx, rcx
@@ -215,7 +215,7 @@ lshift:
 	mov	rcx, rbx
 	jmp	drop
 
-link "RSHIFT"
+link "rshift"
 	call	docol
 rshift:
 	mov	rbx, rcx
@@ -226,7 +226,7 @@ rshift:
 
 ; Memory primitive:
 
-link "C,"
+link "c,"
 	call	docol
 c_:
 	stosb
@@ -241,7 +241,7 @@ c_:
 ; `NAME,` parses a word from input and compiles its counted string literally.
 ; In case the trailing space character is significant, it is stored at the data space pointer (without increment).
 
-link "NAME,"
+link "name,"
 	call	docol
 name_:
 	; rdi: compilation area
@@ -271,7 +271,7 @@ name_:
 ;
 ; This represents another deviation from a typical Forth in that we avoid using a word buffer.
 
-link "NAME"
+link "name"
 	call	docol
 name:
 	call	dup_
@@ -283,7 +283,7 @@ name:
 ; `DIGIT` converts a single digit character into its numeric value.
 ; All invalid characters ([^0-9a-zA-Z]) result in a digit value >35.
 
-link "DIGIT"
+link "digit"
 	call	docol
 digit:
 	; al: digit ASCII character [0-9A-Za-z]
@@ -331,7 +331,7 @@ hex:
 ;
 ; These words facilitate dictionary lookups and the creation of new definitions.
 
-link "SEEK"
+link "seek"
 	call	docol
 seek:
 	; rax: counted string

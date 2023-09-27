@@ -1,77 +1,77 @@
 \ TODO  Split into different files?
 
 \ Parenthesis comments
-:! CHAR  NAME 1+ C@ LITERAL ;
-:! (  BEGIN KEY CHAR ) = UNTIL ;
+:! char  name 1+ c@ literal ;
+:! (  begin key char ) = until ;
 
 \ Word manipulation
-: COUNT  1+ DUP 1- C@ ;
-: TYPE  FOR DUP C@ EMIT 1+ NEXT DROP ;
+: count  1+ dup 1- c@ ;
+: type  for dup c@ emit 1+ next drop ;
 
 \ Character constants
-: CR  $ A EMIT ;
-:! BL  $ 20 LITERAL ;
-: SPACE  BL EMIT ;
+: cr  $ a emit ;
+:! bl  $ 20 literal ;
+: space  bl emit ;
 
-\ Unsigned decimal integer I/O
-:! #  $ 0 NAME COUNT  FOR  >R  $ A *  R@ C@ DIGIT +  R> 1+  NEXT DROP LITERAL ;
-: .#  $ 0  BEGIN >R  # 10 /MOD  R> 1+  OVER 0= UNTIL  NIP  FOR  CHAR 0 + EMIT  NEXT ;
-\ TODO  Add signed decimal I/O and hexadecimal output
+\ Unsigned decimal integer i/o
+:! #  $ 0 name count  for  >r  $ a *  r@ c@ digit +  r> 1+  next drop literal ;
+: .#  $ 0  begin >r  # 10 /mod  r> 1+  over 0= until  nip  for  char 0 + emit  next ;
+\ TODO  Add signed decimal i/o and hexadecimal output
 
 \ Words for embedding data into code
-: EMBED  POSTPONE AHEAD  HERE SWAP ;
-: WITH-LENGTH  HERE SWAP  POSTPONE THEN  OVER - 2LITERAL ;
-: ALONE  POSTPONE THEN LITERAL ;
+: embed  postpone ahead  here swap ;
+: with-length  here swap  postpone then  over - 2literal ;
+: alone  postpone then literal ;
 
 \ Strings
-: PARSE, ( delim -- ) KEY BEGIN 2DUP <> WHILE C, KEY REPEAT 2DROP ; \ Read keys into memory until delimiter
-: PARSE  ( delim -- str cnt ) HERE SWAP PARSE,  DUP THERE OVER - ;  \ PARSE, but temporary (reset data pointer)
-:! S"  EMBED  CHAR " PARSE,  WITH-LENGTH ;
-:! ."  POSTPONE S"  POSTPONE TYPE ;
+: parse, ( delim -- ) key begin 2dup <> while c, key repeat 2drop ; \ Read keys into memory until delimiter
+: parse  ( delim -- str cnt ) here swap parse,  dup there over - ;  \ parse, but temporary (reset data pointer)
+:! s"  embed  char " parse,  with-length ;
+:! ."  postpone s"  postpone type ;
 
 \ Data structures
-: DOCREATE  R> LITERAL ;
-: CREATE  POSTPONE :! POSTPONE DOCREATE ;
-: DODOES>  LP@ >XT  THERE R> COMPILE BACK ;
-:! DOES>  POSTPONE DODOES> POSTPONE R>  ;
-\ Since this is a compile-only Forth, CREATE and DOES> work a little differently.
-\ CREATE is not immediate, which means e.g. `CREATE _ 8 CELLS ALLOT` won't work.
+: docreate  r> literal ;
+: create  postpone :! postpone docreate ;
+: dodoes>  lp@ >xt  there r> compile back ;
+:! does>  postpone dodoes> postpone r>  ;
+\ Since this is a compile-only Forth, create and does> work a little differently.
+\ create is not immediate, which means e.g. `create _ 8 cells allot` won't work.
 \ TODO  Does it really need to be immediate?
-\ Instead, the following definition can be used, e.g. `[ 8 CELLS ] ARRAY _ `
-:! ARRAY  CREATE ALLOT ;
-\ DOES> redefines the CREATEd word as immediate, giving the opportunity for some code generation.
-\ TODO  Find workarounds for these differences. For DOES>, can probably place DOCOL after DOES>. What about CREATE?
+\ Instead, the following definition can be used, e.g. `[ 8 cells ] array _ `
+:! array  create allot ;
+\ does> redefines the CREATEd word as immediate, giving the opportunity for some code generation.
+\ TODO  Find workarounds for these differences. For does>, can probably place docol after does>. What about create?
 
-:! CONSTANT  CREATE , DOES> @ LITERAL ;
-[ $ 0 ] CONSTANT FALSE
-[ $ 1 ] CONSTANT TRUE
-[ SP@ ] CONSTANT S0
-[ RP@ ] CONSTANT R0
+:! constant  create , does> @ literal ;
+[ $ 0 ] constant false
+[ $ 1 ] constant true
+[ sp@ ] constant s0
+[ rp@ ] constant r0
 
-:! VARIABLE  CREATE CELL ALLOT ;
+:! variable  create cell allot ;
 
 \ On/Off and conditional exit
-: ON   TRUE SWAP ! ;
-: OFF  FALSE SWAP ! ;
-: ON?   @ 0<> ;
-: OFF?  @ 0= ;
-: ?EXIT  IF RDROP THEN ;
+: on   true swap ! ;
+: off  false swap ! ;
+: on?   @ 0<> ;
+: off?  @ 0= ;
+: ?exit  if rdrop then ;
 
 \ TODO  Find a good conditional compilation mechanism for supporting optimized versions of e.g. below
 
 \ Dual string operations
-: CSTEP  SWAP 1+ SWAP 1+ ;
-: CCOPY  SWAP C@ SWAP C! ;
-: 2C@    SWAP C@ SWAP C@ ;
+: cstep  swap 1+ swap 1+ ;
+: ccopy  swap c@ swap c! ;
+: 2c@    swap c@ swap c@ ;
 \ Memory copying
-: CMOVE  FOR  2DUP CCOPY CSTEP  NEXT 2DROP ;
+: cmove  for  2dup ccopy cstep  next 2drop ;
 \ Counted string comparisons
-: ?C=  2C@ = ?EXIT  RDROP UNLOOP ;
-: -MATCH  FOR  2DUP ?C= CSTEP  NEXT ; \ Find mismatch
-: CSTR=  DUP C@  -MATCH  2C@ = ;
+: ?c=  2c@ = ?exit  rdrop unloop ;
+: -match  for  2dup ?c= cstep  next ; \ Find mismatch
+: cstr=  dup c@  -match  2c@ = ;
 
-\ TODO  Implement COMPARE (reusing -MATCH)
-: SIGN  DUP 0<> IF  0> 2* 1-  THEN ;
+\ TODO  Implement compare (reusing -match)
+: sign  dup 0<> if  0> 2* 1-  then ;
 
 \ Address alignment
-: ALIGNED  1- TUCK + SWAP INVERT AND ; \ Aligns for powers of 2 only
+: aligned  1- tuck + swap invert and ; \ Aligns for powers of 2 only

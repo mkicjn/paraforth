@@ -4,62 +4,62 @@
 \ The generated binary does next to nothing, but the code is still useful as a sort of regression test.
 \ It might become more useful once bootstrapping is back on the radar (hoping to address usability first).
 
-: INLINE  HERE SWAP CMOVE ;
-:! {  POSTPONE AHEAD  HERE ;
-:! }  HERE OVER -  ROT POSTPONE THEN  2LITERAL ;
+: inline  here swap cmove ;
+:! {  postpone ahead  here ;
+:! }  here over -  rot postpone then  2literal ;
 
-:! PUSHA  FOR POSTPONE PUSHQ NEXT ;
-:! POPA  FOR POSTPONE POPQ NEXT ;
+:! pusha  for postpone pushq next ;
+:! popa  for postpone popq next ;
 
-[ $ 400000 ] CONSTANT LOAD-ADDR
-[ $ 42000 ] CONSTANT EXTRA-MEM
+[ $ 400000 ] constant load-addr
+[ $ 42000 ] constant extra-mem
 
-VARIABLE ELF-HEADER
-: TARGET  ELF-HEADER @ ;
-: PADDR  - ;
-: VADDR  PADDR LOAD-ADDR + ;
-: FILESZ  $ 60 + ;
-: MEMSZ  $ 68 + ;
-: ENTRY  $ 18 + ;
+variable elf-header
+: target  elf-header @ ;
+: paddr  - ;
+: vaddr  paddr load-addr + ;
+: filesz  $ 60 + ;
+: memsz  $ 68 + ;
+: entry  $ 18 + ;
 
-:! SET-ENTRY  NAME FIND TARGET VADDR TARGET ENTRY ! ;
+:! set-entry  name find target vaddr target entry ! ;
 
-: UPDATE-SIZE  HERE TARGET PADDR DUP TARGET FILESZ !  EXTRA-MEM + TARGET MEMSZ ! ;
-:! DUMP-BINARY  UPDATE-SIZE  TARGET  TARGET FILESZ @  TYPE  BYE ;
+: update-size  here target paddr dup target filesz !  extra-mem + target memsz ! ;
+:! dump-binary  update-size  target  target filesz @  type  bye ;
 
-\ VARIABLE TARGET-DICT   [ $ 0 TARGET-DICT ! ]
-\ : TARGET-LINK  TARGET-DICT @ ,  HERE OVER C@ 1+ CMOVE ;
+\ variable target-dict   [ $ 0 target-dict ! ]
+\ : target-link  target-dict @ ,  here over c@ 1+ cmove ;
 
-[ HERE ELF-HEADER ! ]
+[ here elf-header ! ]
 
 [
-	\ ELF Header
-	$ 464C457F D, \ EI_MAG ("\x7fELF")
-	$ 2 C, \ EI_CLASS (64-bit format)
-	$ 1 C, \ EI_DATA (little endian)
-	$ 1 C, \ EI_VERSION (1)
-	$ 0 C, \ EI_OSABI (System V)
-	$ 0 , \ EI_ABIVERSION, EI_PAD
-	$ 2 W, \ e_type (ET_EXEC)
-	$ 3E W, \ e_machine (x86-64)
-	$ 1 D, \ e_version (1)
-	LOAD-ADDR , \ e_entry (TBD)
+	\ elf Header
+	$ 464c457f d, \ ei_mag ("\x7fELF")
+	$ 2 c, \ ei_class (64-bit format)
+	$ 1 c, \ ei_data (little endian)
+	$ 1 c, \ ei_version (1)
+	$ 0 c, \ ei_osabi (System v)
+	$ 0 , \ ei_abiversion, ei_pad
+	$ 2 w, \ e_type (et_exec)
+	$ 3e w, \ e_machine (x86-64)
+	$ 1 d, \ e_version (1)
+	load-addr , \ e_entry (tbd)
 	$ 40 , \ e_phoff
 	$ 0 , \ e_shoff
-	$ 0 D, \ e_flags
-	$ 40 W, \ e_ehsize
-	$ 38 W, \ e_phentsize
-	$ 1 W, \ e_phnum
-	$ 40 W, \ e_shentsize
-	$ 0 W, \ e_shnum
-	$ 0 W, \ e_shstrndx
+	$ 0 d, \ e_flags
+	$ 40 w, \ e_ehsize
+	$ 38 w, \ e_phentsize
+	$ 1 w, \ e_phnum
+	$ 40 w, \ e_shentsize
+	$ 0 w, \ e_shnum
+	$ 0 w, \ e_shstrndx
 
 	\ Program Header
-	$ 1 D, \ p_type
-	$ 7 D, \ p_flags
+	$ 1 d, \ p_type
+	$ 7 d, \ p_flags
 	$ 0 , \ p_offset
-	LOAD-ADDR , \ p_vaddr
-	LOAD-ADDR , \ p_paddr
+	load-addr , \ p_vaddr
+	load-addr , \ p_paddr
 	$ 78 , \ p_filesz
 	$ 78 , \ p_memsz
 	$ 1000 , \ p_align
@@ -69,39 +69,39 @@ VARIABLE ELF-HEADER
 \ I think it should be fine as long as the host never executes the target's code, and vice versa.
 \ It would be preferable to keep things simple and avoid implementing wordlists if possible.
 
-\ Core words: DUP DROP SWAP + - LSHIFT RSHIFT C, DOCOL DOLIT BYE RX TX FIND NAME, :! ; NAME DIGIT $
+\ Core words: dup drop swap + - lshift rshift c, docol dolit bye rx tx find name, :! ; name digit $
 
 \ TODO  Redefine :! to fit the slightly different dictionary structure of the target
-\ TODO  Define {, }, and INLINE inside the target (which means redefining CMOVE, etc.)
-:! DUP  { RDX PUSHQ  RDX RAX MOVQ } INLINE ;
-:! DROP  { RAX RDX MOVQ  RDX POPQ } INLINE ;
-:! 2DROP  { RAX POPQ  RDX POPQ } INLINE ;
-:! SWAP  { RDX RAXXCHGQ } INLINE ;
-:! OVER  { RDX PUSHQ  SWAP } INLINE ;
-:! NIP  { RDX POPQ } INLINE ;
-:! TUCK  { RAX PUSHQ } INLINE ;
-:! +  { RAX RDX ADDQ  DROP } INLINE ;
-:! -  { RAX RDX SUBQ  DROP } INLINE ;
-:! LSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHLQ  RCX POPQ  DROP } INLINE ;
-:! RSHIFT  { RCX PUSHQ  RCX RAX MOVQ  RDX CLSHRQ  RCX POPQ  DROP } INLINE ;
-:! C,  { STOSB  DROP } INLINE ;
-:!  ,  { STOSQ  DROP } INLINE ;
-:! !  { RAX RDX MOVQ!  2DROP } INLINE ;
-:! @  { RAX RAX MOVQ@ } INLINE ;
-:! C@  { RAX RAX MOVZXB@ } INLINE ;
-:! C!  { RAX RDX MOVB!  2DROP } INLINE ;
+\ TODO  Define {, }, and inline inside the target (which means redefining cmove, etc.)
+:! dup  { rdx pushq  rdx rax movq } inline ;
+:! drop  { rax rdx movq  rdx popq } inline ;
+:! 2drop  { rax popq  rdx popq } inline ;
+:! swap  { rdx raxxchgq } inline ;
+:! over  { rdx pushq  swap } inline ;
+:! nip  { rdx popq } inline ;
+:! tuck  { rax pushq } inline ;
+:! +  { rax rdx addq  drop } inline ;
+:! -  { rax rdx subq  drop } inline ;
+:! lshift  { rcx pushq  rcx rax movq  rdx clshlq  rcx popq  drop } inline ;
+:! rshift  { rcx pushq  rcx rax movq  rdx clshrq  rcx popq  drop } inline ;
+:! c,  { stosb  drop } inline ;
+:!  ,  { stosq  drop } inline ;
+:! !  { rax rdx movq!  2drop } inline ;
+:! @  { rax rax movq@ } inline ;
+:! c@  { rax rax movzxb@ } inline ;
+:! c!  { rax rdx movb!  2drop } inline ;
 
-\ TODO  Fix: These definitions rely on references to words in the host (DOCOL, RAX, MOVQ$)
-: DOCOL  R> POSTPONE CALL ;
-: DOLIT  POSTPONE DUP POSTPONE RAX SWAP POSTPONE MOVQ$ ;
+\ TODO  Fix: These definitions rely on references to words in the host (docol, rax, movq$)
+: docol  r> postpone call ;
+: dolit  postpone dup postpone rax swap postpone movq$ ;
 
-\ TODO  Another problem: At some point, DEFER may be needed to handle forward references.
-\ It may be worth carefully selecting which words to DEFER for maximum utility later.
+\ TODO  Another problem: At some point, defer may be needed to handle forward references.
+\ It may be worth carefully selecting which words to defer for maximum utility later.
 
-:! START
-	RAX [ $ 3C ] MOVQ$
-	RDI [ $ 4D ] MOVQ$
-	SYSCALL
+:! start
+	rax [ $ 3c ] movq$
+	rdi [ $ 4d ] movq$
+	syscall
 
-SET-ENTRY START
-DUMP-BINARY
+set-entry start
+dump-binary
