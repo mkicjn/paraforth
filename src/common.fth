@@ -72,3 +72,6 @@
 
 \ TODO  Implement COMPARE (reusing -MATCH)
 : SIGN  DUP 0<> IF  0> 2* 1-  THEN ;
+
+\ Address alignment
+: ALIGNED  1- TUCK + SWAP INVERT AND ; \ Aligns for powers of 2 only

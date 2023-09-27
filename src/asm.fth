@@ -113,3 +113,4 @@
 :! STOSQ  REX.W, $ AB C, ;
 
 :! SYSCALL  $ 050F W, ;
+:! NOP  $ 90 C, ;

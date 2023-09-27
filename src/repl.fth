@@ -6,6 +6,7 @@ VARIABLE 'QUIT
 : ?UNSTRUCTURED  DUP ' ; =  SP@ S0 $ 3 CELLS - <>  AND  IF ." UNSTRUCTURED" CR QUIT THEN ;
 : ?UNDERFLOW  SP@ S0 >  IF ." UNDERFLOW" CR QUIT THEN ;
 
+: FIND  SEEK DUP IF >XT THEN ;
 \ TODO  Safer redefinitions of all words that search the wordlist
 
 :! (QUIT)  S0 SP! R0 RP!

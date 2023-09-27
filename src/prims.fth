@@ -122,31 +122,32 @@
 :! LP@  { DUP  RAX RSI MOVQ } ; \ link pointer
 :! LP!  { RSI RAX MOVQ  DROP } ;
 
-\ Cell size operations
-:! CELL   $ 8 LITERAL ;
-:! CELLS  { RAX } $ 3 { SHLQ$ } ;
-:! CELL+  CELL { RAX ADDQ$ } ;
-
 \ Optimized 2LITERAL to reduce stack shuffling
 : 2LITERAL  { RDX DPUSHQ  RAX DPUSHQ  RAX } SWAP { MOVQ$  RDX } SWAP { MOVQ$ } ;
 
-\ Dictionary link manipulation (included here because it is an implementation-specific detail)
-: >NAME  $ 8 + ; \ Skip next link pointer
-: >XT    >NAME DUP C@ + 1+ ; \ Skip counted string name
-: >BODY  >XT $ 5 + ; \ Skip first call instruction
+\ Constants for machine-specific fixed widths
 
+\ Cell size operations
+:! CELL   $ 8 LITERAL ; \ Length of a machine register
+:! CELLS  { RAX } $ 3 { SHLQ$ } ;
+:! CELL+  { RAX } CELL { ADDQ$ } ;
+
+\ Dictionary link manipulation (included here because it is an implementation-specific detail)
+:! /CALL  $ 5 LITERAL ; \ Length of a call instruction
+: >NAME  CELL+ ; \ Skip next link pointer
+: >XT    >NAME DUP C@ + 1+ ; \ Skip pointer + counted string name
+: >BODY  >XT /CALL + ; \ Skip pointer, name, and first call instruction
 
 \ Control structures
 
 : COND  { RBX RAX MOVQ  DROP  RBX RBX TESTQ } ; \ Compile code that sets flags based on top stack item
 \ ^ Note: Not immediate
-\ TODO  Include more basic branching primitives (the MARK/RESOLVE family) and define in terms of those
+\ TODO  Consider bundling more basic branching primitives (the MARK/RESOLVE family) for use with inline assembly and define these in terms of those
 :! BEGIN  HERE ; \ Leave a back reference on the stack (redundant definition here only for completeness)
 :! AGAIN        { JMPL$ } ; \ Resolve a back reference on the stack (compile a backwards jump)
 :! UNTIL  COND  { JZL$ } ;  \ Resolve a back reference on the stack with a conditional jump
-:! AHEAD        HERE 1+     HERE { JMPL$ } ; \ Leave a forward reference on the stack
-:! IF     COND  HERE 1+ 1+  HERE { JZL$ } ;  \ Leave a conditional forward reference on the stack
-\ ^^ Note: AHEAD and IF can both cause infinite loops if not terminated - need to check for same stack depth when compiling later
+:! AHEAD        $ 0 { JMPL$ }  HERE $ 4 - ; \ Leave a forward reference on the stack
+:! IF     COND  $ 0 { JZL$ }   HERE $ 4 - ;  \ Leave a conditional forward reference on the stack
 :! THEN  THERE DUP REL32, BACK ; \ Resolve a forward reference (fill in a forward jump)
 :! ELSE  POSTPONE AHEAD  SWAP  POSTPONE THEN ; \ Leave a forward reference, then resolve an existing one
 :! WHILE  POSTPONE IF  SWAP ; \ Leave a forward reference on the stack under an existing (back) reference
