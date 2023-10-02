@@ -19,36 +19,36 @@
 \ TODO  Add signed decimal i/o and hexadecimal output
 
 \ Words for embedding data into code
-: embed  postpone ahead  here swap ;
-: with-length  here swap  postpone then  over - 2literal ;
-: alone  postpone then literal ;
+: embed  { ahead }  here swap ;
+: with-length  here swap  { then }  over - 2literal ;
+: alone  { then }  literal ;
 
 \ Strings
 : parse, ( delim -- ) key begin 2dup <> while c, key repeat 2drop ; \ Read keys into memory until delimiter
 : parse  ( delim -- str cnt ) here swap parse,  dup there over - ;  \ parse, but temporary (reset data pointer)
 :! s"  embed  char " parse,  with-length ;
-:! ."  postpone s"  postpone type ;
+:! ."  { s" type } ;
 
 \ Data structures
-: docreate  r> literal ;
-: create  postpone :! postpone docreate ;
-: dodoes>  lp@ >xt  there r> compile back ;
-:! does>  postpone dodoes> postpone r>  ;
-\ Since this is a compile-only Forth, create and does> work a little differently.
-\ create is not immediate, which means e.g. `create _ 8 cells allot` won't work.
-\ TODO  Does it really need to be immediate?
-\ Instead, the following definition can be used, e.g. `[ 8 cells ] array _ `
-:! array  create allot ;
-\ does> redefines the CREATEd word as immediate, giving the opportunity for some code generation.
-\ TODO  Find workarounds for these differences. For does>, can probably place docol after does>. What about create?
+\ Note that since this is a compile-only Forth, create is not immediate, and therefore can't be used "immediately"
+: (create)  r> literal ;
+:  create   { :!  (create) } ;
+: (does>)  lp@ >xt  there r> compile back ;
+:! does!>  { (does>) r> } ;
+:! does>   { does!>  literal docol } ;
+\ ^^ Note the addition of does!> which redefines the created word to be immediate
+\ This is in contrast to does>, which is intended to behave more like a normal Forth
+\ As an example, compare the following definitions:
+:! variable  create cell allot ;
+:! constant  create , does!>  @ literal ;
+:! value     create , does>   @ ;
+:! to  name seek >body  literal { ! } ;
 
-:! constant  create , does> @ literal ;
+\ Common constants
 [ $ 0 ] constant false
 [ $ 1 ] constant true
 [ sp@ ] constant s0
 [ rp@ ] constant r0
-
-:! variable  create cell allot ;
 
 \ On/Off and conditional exit
 : on   true swap ! ;
