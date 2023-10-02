@@ -43,8 +43,8 @@ My hope for this project is that it will eventually become fully self-hosting, e
 **Experimental:** The loader script can take care of some of this tedium. Run `./loader.sh` for details.
 
 * Compile with `make`
-* Run with, e.g., `cat input | ./core > output` or `cat input - | ./core`
-* Debug with `gdb core -ex 'r < <(cat input)'` and an `int3` assembled somewhere
+* Run with, e.g., `cat input | ./paraforth > output` or `cat input - | ./paraforth`
+* Debug with `gdb paraforth -ex 'r < <(cat input)'` and an `int3` assembled somewhere
   * Tip: Disassemble latest word with `x/10i $rsi+9+N` where *N* is the length of its name (i.e., `x/1c $rsi+8`)
-* Disassemble using `objdump -b binary -m i386:x86-64 -D core`
+* Disassemble using `objdump -b binary -m i386:x86-64 -D paraforth`
 

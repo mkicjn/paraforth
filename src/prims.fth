@@ -125,6 +125,7 @@
 \ Optimized 2literal to reduce stack shuffling
 : 2literal  { rdx dpushq  rax dpushq  rax } swap { movq$  rdx } swap { movq$ } ;
 
+
 \ Constants for machine-specific fixed widths
 
 \ Cell size operations
@@ -138,7 +139,13 @@
 : >xt    >name dup c@ + 1+ ; \ Skip pointer + counted string name
 : >body  >xt /call + ; \ Skip pointer, name, and first call instruction
 
+
 \ Control structures
+
+:! execute   { rbx rax movq  drop  rbx call } ;
+:! jump      { rbx rax movq  drop  rbx jmp } ;
+:! @execute  { rbx rax movq  drop  rbx call@ } ;
+:! @jump     { rbx rax movq  drop  rbx jmp } ;
 
 : cond  { rbx rax movq  drop  rbx rbx testq } ; \ Compile code that sets flags based on top stack item
 \ ^ Note: Not immediate
@@ -153,7 +160,6 @@
 :! while  postpone if  swap ; \ Leave a forward reference on the stack under an existing (back) reference
 :! repeat  postpone again  postpone then ; \ Resolve a back reference, then resolve a forward reference
 
-\ Definite loops
 \ Notes:
 \ * for..next only supports 256 byte bodies due to rel8 encoding
 \ * n for.. will iterate i from n-1 to 0 to support more common use cases (in a normal Forth this requires aft)
@@ -179,8 +185,6 @@
 
 :! [  here ;
 :! exit  postpone ; ;
-:! execute  { rbx rax movq  drop  rbx call } ;
-:! jump     { rbx rax movq  drop  rbx jmp } ; \ Included as a no-return alternative to execute
 :! ]  postpone exit  back  here execute ;
 
 \ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the core is.

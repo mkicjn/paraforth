@@ -57,7 +57,8 @@
 
 :! compile  docol  $ e8 c, rel32, ;
 :! call$  compile ;
-:! call  $ ff c, $ 2 reg modr/m, ;
+:! call   $ ff c, $ 2 reg modr/m, ;
+:! call@  $ ff c, $ 2 mem modr/m, ;
 
 :! pushq  $ 50 + c, ;
 :! popq   $ 58 + c, ;
@@ -97,13 +98,15 @@
 :! cmovlq  swap rex.w, $ 4c0f w, reg modr/m, ;
 
 :! jmp   $ ff c, $ 4 reg modr/m, ;
+:! jmp@  $ ff c, $ 4 mem modr/m, ;
+:! jmpl$  $ e9 c, rel32, ;
+:! jzl$   $ 840f w, rel32, ;
+:! jnzl$  $ 850f w, rel32, ;
+
 :! jmp$  $ eb c, rel8, ;
 :! jz$   $ 74 c, rel8, ;
 :! jnz$   $ 75 c, rel8, ;
 :! loop$  $ e2 c, rel8, ;
-:! jmpl$  $ e9 c, rel32, ;
-:! jzl$   $ 840f w, rel32, ;
-:! jnzl$  $ 850f w, rel32, ;
 
 :! rep    $ f3 c, ;
 :! repe   $ f3 c, ;
