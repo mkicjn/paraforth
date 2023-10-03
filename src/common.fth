@@ -64,10 +64,11 @@
 : ?exit  if rdrop then ;
 
 \ Vectored execution
+:! alias  { :! postpone ; } ;
 :! nothing ;
 :! defer  create ' nothing , does>  @execute ;
-:! is    { to } ;
-:! doer  { defer } ;
+alias is    to
+alias doer  defer
 :! make  name seek >body literal  docol r> swap ! ;
 \ TODO  ^ Add support for ;and and factor out `name seek >body literal`
 
