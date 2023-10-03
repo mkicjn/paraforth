@@ -1,6 +1,6 @@
-\ TODO  Unfinished
-variable 'quit
-: quit  'quit @ execute ;
+\ TODO  Unfinished (also, consider renaming this file to something else)
+
+defer quit
 
 : ?not-found  dup 0=  if over count type char ? emit cr quit then ;
 : ?unstructured  dup ' ; =  sp@ s0 $ 3 cells - <>  and  if ." Unstructured" cr quit then ;
@@ -20,12 +20,14 @@ variable 'quit
 		?underflow
 	again ;
 
-[ ' (quit) 'quit !  quit ]
+[ ' (quit) is quit ]
+[ quit ]
 
-\ TODO  Move to other source code file, or include debug utilities in this file?
 :! undo  lp@ back  lp@ @ lp! ;
-:! marker  create lp@ , does!>  @ lp! postpone undo ;
-:! words  lp@ begin dup 0<> while  dup >name count type space  @ repeat  drop  cr ;
+:! marker  create lp@ , does!>  @ lp! ;
+:! words  lp@ begin dup 0<> while  dup >name count type space  @ repeat drop  cr ;
+
+marker reset
 
 \ TODO  forget (consider changing dictionary structure), hide, hook, defer/is or doer/make, a debug word, and .s
 \ Flawed definition : .s  begin sp@ s0 < while .# bl emit repeat ;
