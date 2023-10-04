@@ -45,6 +45,7 @@
 :! movq   rex.w,  $ 89 c,  reg modr/m, ;
 :! movq!  rex.w,  $ 89 c,  mem modr/m, ;
 :! movq@  rex.w,  swap $ 8b   c,  mem modr/m, ;
+:! movq@+8  rex.w,  swap $ 8b   c,  mem+8 modr/m, ;
 :! movq$  rex.w,  swap $ b8 + c,  , ;
 :! rbpmovq@  $ 5 swap  rex.w, $ 8b c, $ 1 modr/m, $ 0 c, ;
 :! rbpmovq!  $ 5 swap  rex.w, $ 89 c, $ 1 modr/m, $ 0 c, ;

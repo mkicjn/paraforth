@@ -68,9 +68,11 @@
 :! >r  { rax pushq  drop } ;
 :! r>  { dup  rax popq } ;
 :! 2>r  { rdx pushq  rax pushq  2drop } ;
-:! 2r>  { 2dup  rdx popq  rax popq } ;
+:! 2r>  { 2dup  rax popq  rdx popq } ;
 :! r@  { dup  rax (sib) movq@  rsp (none) r*1 sib, } ;
+:! 2r@  { r@  rdx dpushq  rdx (sib) movq@+8  rsp (none) r*1 sib, } $ 8 c, ;
 :! rdrop  { rsp } $ 8 { addq$ } ;
+:! 2rdrop  { rsp } $ 10 { addq$ } ;
 
 \ Basic arithmetic
 :! +  { rax rdx addq  nip } ;
@@ -124,9 +126,6 @@
 
 \ Optimized 2literal to reduce stack shuffling
 : 2literal  { rdx dpushq  rax dpushq  rax } swap { movq$  rdx } swap { movq$ } ;
-
-
-\ Constants for machine-specific fixed widths
 
 \ Cell size operations
 :! cell   $ 8 literal ; \ Length of a machine register
