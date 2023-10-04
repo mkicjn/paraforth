@@ -18,6 +18,7 @@
 :! #  $ 0  name count  for  >r  $ a *  r@ c@ digit +  r> 1+  next drop literal ;
 : u.  $ 0  begin >r  # 10 /mod  r> 1+  over 0= until  nip  for  char 0 + emit  next ;
 :  .  dup 0< if  char - emit  negate  then  u. ;
+:  ?  @ . cr ;
 \ TODO  Add hexadecimal output
 
 \ Words for embedding data into code
@@ -48,7 +49,8 @@
 :! variable  create cell allot ;
 :! constant  create , does!>  @ literal ;
 :! value     create , does>   @ ;
-:! to  name seek >body literal  { ! } ;
+:! at  name seek >body literal ;
+:! to  { at ! } ;
 
 \ Common constants
 [ $ 0 ] constant false
@@ -69,8 +71,8 @@
 :! defer  create ' nothing , does>  @execute ;
 alias is    to
 alias doer  defer
-:! make  name seek >body literal  docol r> swap ! ;
-\ TODO  ^ Add support for ;and and factor out `name seek >body literal`
+:! make  { at }  docol  r> swap ! ;
+\ TODO  ^ Add support for ;and
 
 
 \ TODO  Find a good conditional compilation mechanism for supporting optimized versions of e.g. below

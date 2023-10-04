@@ -1,4 +1,4 @@
-\ TODO  Unfinished (also, consider renaming this file to something else)
+\ This file is meant to provide a friendlier interactive environment to work in.
 
 defer quit
 
@@ -9,9 +9,11 @@ defer quit
 : find  seek  dup if  >xt  then ;
 \ TODO  Safer redefinitions of all words that search the wordlist
 
-:! (quit)  s0 sp!  r0 rp!
+:! (quit)
+	s0 sp!  r0 rp!
 	postpone \
-	begin   name  dup find
+	begin
+		name  dup find
 		( cstr xt )
 		?not-found
 		?unstructured

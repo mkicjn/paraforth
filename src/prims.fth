@@ -59,6 +59,7 @@
 \ Memory operations
 :! @  { rax rax movq@ } ;
 :! !  { rax rdx movq!  2drop } ;
+:! +!  { (sib) rdx addq!  rax (none) r*1 sib,  2drop } ;
 :! c@  { rax rax movzxb@ } ;
 :! c!  { rax rdx movb!  2drop } ;
 :! ,   { stosq  drop } ;

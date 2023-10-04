@@ -31,6 +31,7 @@
 :! rex.w, docol  $ 48 c, ;
 
 :! addq   rex.w, $ 01 c, reg modr/m, ;
+:! addq!  rex.w, $ 01 c, mem modr/m, ;
 :! subq   rex.w, $ 29 c, reg modr/m, ;
 :! addq$  rex.w, $ 81 c, swap $ 0 reg modr/m, d, ;
 :! subq$  rex.w, $ 81 c, swap $ 5 reg modr/m, d, ;

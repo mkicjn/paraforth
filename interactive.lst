@@ -1,6 +1,7 @@
 src/asm.fth
 src/prims.fth
-src/linux.fth
 src/common.fth
+src/linux.fth
+src/random.fth
 src/repl.fth
 -
