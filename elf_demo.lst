@@ -1,5 +1,5 @@
 src/asm.fth
 src/prims.fth
-src/linux.fth
 src/common.fth
+src/linux.fth
 examples/elf_demo.fth
