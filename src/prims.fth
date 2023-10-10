@@ -176,16 +176,16 @@
 
 \ This is another interesting place where this Forth differs from tradition.
 \ Since there is no distinct compile/interpret state, we can compensate quite effectively by simply allowing code to be compiled and executed "immediately".
-\ The obvious limitation this has is that it's possible to accidentally compile over the code while it executes.
 
+\ The obvious limitation this has is that it's possible for code executed like this to accidentally compile over itself while it executes.
 \ So far, though, this limitation seems difficult to run into by accident, and easy to work around if you do.
-\ There are obvious modifications to try if this ever does becomes an issue, but a general solution is not clear enough to implement right away.
-\ Either way, this is arguably more powerful in some ways than what is offered in a typical Forth, since it can be arbitrarily nested in interesting ways.
+\ Either way, this is arguably more powerful than what is offered in a typical Forth, since it can be arbitrarily nested in interesting ways.
 \ This approach also eliminates the need for a whole host of inconsistently-bracketed or state-aware words.
 
-:! [  here ;
+:! /pad  $ 100 literal ; \ This spacing isn't strictly necessary, but provides some safety in case parsing words are interpreted.
+:! [  here  /pad allot ;
 :! exit  postpone ; ;
-:! ]  postpone exit  back  here execute ;
+:! ]  postpone exit  back  here /pad + execute ;
 
 \ Side note: I think it's very interesting that this level of sophistication is achievable at all, let alone so easily, given how simple the core is.
 \ Upon reflection, I guess it's ultimately a consequence of allowing immediate words, which compile code, to be defined and executed immediately themselves.
