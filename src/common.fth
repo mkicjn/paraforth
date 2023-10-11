@@ -47,6 +47,7 @@
 
 \ As an example, compare the following definitions:
 :! variable  create cell allot ;
+:! 2variable  create $ 2 cells allot ;
 :! constant  create , does!>  @ literal ;
 :! value     create , does>   @ ;
 :! at  name seek >body literal ;

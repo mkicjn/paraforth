@@ -40,9 +40,14 @@
 \ See the notes in core.asm to understand the register convention.
 \ (Note that some operations are redefined to allow for a more optimized inlining implementation)
 
+\ Cell size operations
+:! cell   $ 8 literal ; \ Length of a machine register
+:! cells  { rax } $ 3 { shlq$ } ;
+:! cell+  { rax } cell { addq$ } ;
+
 \ dpopq and dpushq are pseudo-instructions corresponding to the data stack
-:! dpopq   { rbpmovq@  rbp } $ 8 { addq$ } ;
-:! dpushq  { rbp } $ 8 { subq$  rbpmovq! } ;
+:! dpopq   { rbpmovq@  rbp } cell { addq$ } ;
+:! dpushq  { rbp } cell { subq$  rbpmovq! } ;
 
 \ Stack manipulation
 :! dup  { rdx dpushq  rdx rax movq } ;
@@ -64,6 +69,8 @@
 :! c!  { rax rdx movb!  2drop } ;
 :! ,   { stosq  drop } ;
 :! c,  { stosb  drop } ;
+:! 2@  { dup  rdx } cell { addq$  rdx rdx movq@  rax rax movq@ } ;
+:! 2!  { rax rdx movq!  cell+  nip  rax rdx movq!  drop } ;
 
 \ Return stack operations
 :! >r  { rax pushq  drop } ;
@@ -71,9 +78,9 @@
 :! 2>r  { rdx pushq  rax pushq  2drop } ;
 :! 2r>  { 2dup  rax popq  rdx popq } ;
 :! r@  { dup  rax (sib) movq@  rsp (none) r*1 sib, } ;
-:! 2r@  { r@  rdx dpushq  rdx (sib) movq@+8  rsp (none) r*1 sib, } $ 8 c, ;
-:! rdrop  { rsp } $ 8 { addq$ } ;
-:! 2rdrop  { rsp } $ 10 { addq$ } ;
+:! 2r@  { r@  rdx dpushq  rdx (sib) movq@+8  rsp (none) r*1 sib, } cell c, ;
+:! rdrop  { rsp } cell { addq$ } ;
+:! 2rdrop  { rsp } $ 2 cells { addq$ } ;
 
 \ Basic arithmetic
 :! +  { rax rdx addq  nip } ;
@@ -127,11 +134,6 @@
 
 \ Optimized 2literal to reduce stack shuffling
 : 2literal  { rdx dpushq  rax dpushq  rax } swap { movq$  rdx } swap { movq$ } ;
-
-\ Cell size operations
-:! cell   $ 8 literal ; \ Length of a machine register
-:! cells  { rax } $ 3 { shlq$ } ;
-:! cell+  { rax } cell { addq$ } ;
 
 \ Dictionary link manipulation (included here because it is an implementation-specific detail)
 :! /call  $ 5 literal ; \ Length of a call instruction
