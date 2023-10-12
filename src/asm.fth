@@ -119,3 +119,6 @@
 
 :! syscall  $ 050f w, ;
 :! nop  $ 90 c, ;
+
+:! rdrand  rex.w,  $ c70f w,  $ 6 $ 3 modr/m, ;
+:! rdtsc  $ 310f w, ;
