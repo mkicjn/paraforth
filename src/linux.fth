@@ -5,7 +5,7 @@
 	rax [ # 60 ] movq$
 	syscall ;
 
-alias bye   sys_exit
+alias bye  sys_exit
 
 
 \ rcx, rdx, rdi, and rsi are clobbered by syscalls and must be preserved

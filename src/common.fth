@@ -59,12 +59,15 @@
 [ sp@ ] constant s0
 [ rp@ ] constant r0
 
-\ On/Off and conditional exit
+\ On/Off
 : on   true swap ! ;
 : off  false swap ! ;
 : on?   @ 0<> ;
 : off?  @ 0= ;
+
+\ Return stack manipulation
 : ?exit  if rdrop then ;
+: later>  2r> >r >r ;
 
 \ Vectored execution
 :! alias  { :! postpone ; } ;
@@ -90,5 +93,9 @@ alias doer  defer
 
 \ TODO  Implement compare (reusing -match)
 
-\ Address alignment
+\ Common address and size calculations
 : aligned  1- tuck + swap invert and ; \ Aligns for powers of 2 only
+: within  rot tuck  > -rot  <= and ;
+: kb  # 10 lshift ;
+: mb  # 20 lshift ;
+: gb  # 30 lshift ;

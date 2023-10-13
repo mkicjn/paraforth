@@ -27,7 +27,7 @@ defer quit
 
 :! undo  lp@ back  lp@ @ lp! ;
 :! marker  create  lp@ ,  does!>  @ lp! ;
-:! words  lp@  begin  dup 0<>  while  dup  >name count type  space  @  repeat  drop  cr ;
+:! words  lp@ traverse-list>  >name count type space ;
 
 marker reset
 

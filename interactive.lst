@@ -3,5 +3,6 @@ src/prims.fth
 src/common.fth
 src/linux.fth
 src/random.fth
+src/lists.fth
 src/repl.fth
 -
