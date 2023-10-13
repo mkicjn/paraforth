@@ -1,13 +1,29 @@
 \ This file is meant to provide a friendlier interactive environment to work in.
 
+
+\ Safety checks
+
 defer quit
 
-: ?not-found  dup 0=  if  over  count type  char ? emit  cr  quit  then ;
-: ?unstructured  dup ' ; =  sp@ s0 $ 3 cells - <> and  if  ." Unstructured" cr  quit  then ;
-: ?underflow  sp@ s0 >  if  ." Underflow" cr  quit  then ;
+: ?not-found
+	dup 0<> ?exit
+	drop count type  char ? emit  cr  quit ;
 
-: find  seek  dup if  >xt  then ;
+: ?unstructured
+	dup ' ; <> ?exit
+	sp@ s0 $ 2 cells - = ?exit
+	." Unstructured" cr  quit ;
+
+: ?underflow
+	sp@ s0 <= ?exit
+	." Underflow" cr  quit ;
+
+
 \ TODO  Safer redefinitions of all words that search the wordlist
+: find  seek  dup if  >xt  then ;
+
+
+\ Redefined REPL with safety checks introduced above
 
 :! (quit)
 	s0 sp!  r0 rp!
@@ -24,6 +40,9 @@ defer quit
 
 [ ' (quit) is quit ]
 [ quit ]
+
+
+\ Development utilities
 
 :! undo  lp@ back  lp@ @ lp! ;
 :! marker  create  lp@ ,  does!>  @ lp! ;
