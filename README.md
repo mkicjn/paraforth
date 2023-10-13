@@ -1,14 +1,19 @@
 # paraforth
 **An extremely minimal (but not limiting) native code Forth in <1K**
 
-_(This project is a slow work in progress.)_
+At its heart, paraforth is just an assembly program with an association list of names to subroutines, and an input loop for invoking them.
+By pre-populating the list with *just* enough operations to implement *another assembler*, a self-extensible language is born.
+
+This project demonstrates a leap, from just 19 words and 851 bytes, to an interactive programming environment with hundreds of words to date.
+
+_(This project is an active work in progress.)_
 
 ### Quirks and Features:
 
 * Tiny binary executable size - under one kilobyte
 * Fast - a very informal benchmark estimates approximately 2-3x speedup over `gforth-fast`
   * (Benchmark task was to find the longest Collatz sequence for starting values under 1 million)
-* Fewer primitives than eForth - 20 vs. 31 - and at least 2 of those are not even strictly necessary
+* Fewer primitives than eForth - 19 vs. 31 - with at least a couple that could stand to be removed
 * Compile-only Forth, with no `STATE` variable and no interpreter buffer
   * Code can still be "interpreted" (i.e., compiled and then run immediately) using `[` and `]`
 * Subroutine-threaded code, with inlining of primitives also implemented at runtime
@@ -26,12 +31,12 @@ _(This project is a slow work in progress.)_
 The loader script and list files handle the tedium of concatenating and piping source code files (plus standard input, if applicable).
 Running `./loader.sh interactive.lst` provides the friendliest environment available for experimentation.
 
-Note that due to the interaction between `cat`, standard input, and the pipe to paraforth, you will need to hit enter once paraforth terminates before returning to the terminal.
-The loader script can also be run with no arguments for additional details.
-
-The canonical Hello World example looks like this:
+From there, you can try entering the canonical Hello World example, which looks like this:
 
     [ ." Hello, world!" cr  bye ]
+
+Note that due to the interaction between `cat`, standard input, and the pipe to paraforth, you will need to hit enter once paraforth terminates before returning to the terminal.
+The loader script can also be run with no arguments for additional details.
 
 More example code is available in the [examples](examples) and [src](src) directories.
 
@@ -69,7 +74,7 @@ My hope for this project is that it will eventually become fully self-hosting, e
 2. Implement a basic assembler using the compiler. ***(DONE)***
 3. Extend the existing Forth compiler in-place using the assembler. ***(DONE)***
 4. Improve usability by providing a REPL with error handling, convenient launch scripts, and library code. ***(IN PROGRESS)***
-5. Bootstrap the core and use the resulting system for other pet projects.
+5. Bootstrap the core and use the resulting system for other projects.
 
 _(Anything marked done is still subject to improvements over time.)_
 
