@@ -13,7 +13,7 @@
 :! bl  $ 20 literal ;
 : space  bl emit ;
 
-\ Decimal integer i/o
+\ Decimal integer I/O
 : sign  dup 0<> if  0> 2* 1-  then ;
 :! #  $ 0  name count  for  >r  $ a *  r@ c@ digit +  r> 1+  next drop literal ;
 : u.  $ 0  begin >r  # 10 /mod  r> 1+  over 0= until  nip  for  char 0 + emit  next ;

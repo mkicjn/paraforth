@@ -4,7 +4,7 @@
 At its heart, paraforth is just an assembly program with an association list of names to subroutines, and an input loop for invoking them.
 By pre-populating the list with *just* enough operations to implement *another assembler*, a self-extensible language is born.
 
-This project demonstrates a leap, from just 19 words and 851 bytes, to an interactive programming environment with hundreds of words to date.
+This project demonstrates a leap from just 19 words and 851 bytes to an interactive programming environment with hundreds of words.
 
 _(This project is an active work in progress.)_
 
