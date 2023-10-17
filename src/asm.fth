@@ -55,6 +55,7 @@
 :! movzxb@  rex.w, $ b60f w, swap mem modr/m, ;
 :! movzxbl  $ b60f w, reg modr/m, ;
 
+:! xchgq     rex.w, $ 87 c,  reg modr/m, ;
 :! raxxchgq  rex.w, $ 90 + c, ;
 
 :! compile  docol  $ e8 c, rel32, ;
