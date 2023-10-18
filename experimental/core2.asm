@@ -114,16 +114,6 @@ _drop:
 	xchg	rsp, rbp
 	ret
 
-link "swap"
-__swap:
-	call	_docol
-_swap:
-	xchg	rsp, rbp
-	pop	rdx
-	push	rax
-	mov	rax, rdx
-	xchg	rsp, rbp
-	ret
 
 ;;;;;;;;		Arithmetic
 
