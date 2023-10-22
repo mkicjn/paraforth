@@ -48,12 +48,15 @@ b:
 
 latest = 0
 
+wordlist equ 10 ; Only used to print list of words at assembly-time
+
 macro link str {
 local next
 next:
 	dq latest
 	latest = next
 	counted str
+	wordlist equ wordlist, '  ', str, 10
 }
 
 
@@ -161,9 +164,10 @@ _emit:
 
 ;;;;;;;;		Parsing
 
-skip:	call	sys_rx
+next:
+	call	sys_rx
 	cmp	al, 0x20
-	jle	skip
+	jle	next
 	ret
 
 link "name,"
@@ -173,7 +177,7 @@ _nameput:
 	push	rax
 	inc	rdi
 	push	rdi
-	call	skip
+	call	next
 .put:	stosb
 	call	sys_rx
 	cmp	al, 0x20
@@ -190,7 +194,7 @@ __hex:
 _hex:
 	push	rax
 	xor	rdx, rdx
-	call	skip
+	call	next
 .loop:	cmp	al, 0x39
 	ja	.gt9
 	sub	al, 0x30
@@ -219,8 +223,7 @@ _def:
 	mov	[rdi], rsi
 	mov	rsi, rdi
 	add	rdi, 8
-	call	_nameput
-	ret
+	jmp	_nameput
 
 link "seek"
 __seek:
@@ -247,6 +250,16 @@ _seek:
 
 ;;;;;;;;		REPL
 
+link "\";"; ("\")
+__comment:
+_comment:
+	push	rax
+.skip:	call	sys_rx
+	cmp	al, 0xa
+	jne	.skip
+	pop	rax
+	ret
+
 start:
 	lea	rbp, [space]
 	lea	rdi, [space]
@@ -269,3 +282,6 @@ last = latest
 	rb 1024*8
 space:
 	rb 64*4096
+
+
+display 10, 'Words:', 10, wordlist, 10
