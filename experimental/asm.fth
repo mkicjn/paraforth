@@ -47,7 +47,9 @@
 :! cmpq     rex.w,   $ 39 c,  swap  reg modr/m, ;
 :! movzxb@  rex.w, $ b60f w,  swap  mem modr/m, ;
 :! rel32,  docol  rax rdi subq  $ 4 - d, ;
-:! jz$     $ e9 c,  rel32, ;
+:! jmp  $ ff c, $ 4 reg modr/m, ;
+:! jmp$    $ e9 c, rel32, ;
+:! jz$   $ 840f w, rel32, ;
 
 \ Some initial foundations of a Forth system
 :! compile  docol  $ e8 c,  rel32, ;
@@ -69,4 +71,52 @@
 :! }  ;
 :! {  begin  name find dup compile  ' } =  until ;
 
+\ Data space pointer manipulation
+: allot  rdi rax addq  drop ;
+: there  rdi rax xchgq ;
+: back   rdi rax movq  drop ;
+
+\ Interpretation
+: execute  rdx rax movq  drop  rdx jmp ;
+:! /pad  $ 100 literal ;
+:! [  here  /pad allot ;
+:! exit  { ; } ;
+:! ]  { exit }  back  here /pad + execute ;
+
 \ TODO - Explore even more extreme minimalism above and with core2
+
+\ Untested stuff below
+\ --------------------------------------------------------------------------------
+
+:! again  { jmp$ } ;
+:! ahead  $ 0 { jmp$ }  here $ 4 - ;
+:! if   { cond }  $ 0 { jz$ }  here $ 4 - ;
+:! then  there  dup rel32,  back ;
+:! else  { ahead } swap { then } ;
+:! while  { if } swap ;
+:! repeat  { again then } ;
+
+:! 1shlq  rex.w, $ d1 c, $ 6 reg modr/m, ;
+:! 1sarq  rex.w, $ d1 c, $ 7 reg modr/m, ;
+:! decq   rex.w, $ ff c, $ 1 reg modr/m, ;
+: 2*  rax 1shlq ;
+: 2/  rax 1sarq ;
+: 1+  rax incq ;
+: 1-  rax decq ;
+
+:! :code  { :! rsp rbp xchgq } ;
+:! ;code  { rsp rbp xchgq ; } ;
+:! setgb  $ 9f0f w, $ 0 reg modr/m, ;
+:! movzxbl  $ b60f w, reg modr/m, ;
+:! andq  rex.w, $ 21 c, reg modr/m, ;
+:code >  rdx rax movq  rax popq  rax rdx cmpq  rax setgb  rax rax movzxbl ;code
+:code and  rdx popq  rax rdx andq ;code
+
+\ TODO - Not compiling for some reason. Seems like rax is getting corrupted somehow
+[ $ 10 begin dup $ 0 > while  $ 4d emit  1- then int3! drop ]
+int3!
+
+: collatz-step  dup $ 1 and  if  dup 2* + 1+  else  2/  then ;
+: collatz-len   $ 0 swap begin  dup $ 1 > while  collatz-step  swap 1+ swap repeat drop ;
+: max-collatz   $ 0 swap for  i collatz-len max  next ;
+[ # 1000000 max-collatz . cr bye ]
