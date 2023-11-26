@@ -44,11 +44,11 @@ defer quit
 
 \ Development utilities
 
-:! undo  lp@ back  lp@ @ lp! ;
-:! marker  create  lp@ ,  does!>  @ lp! ;
+: (forget)  back  here @ lp! ;
+:! forget  name  dup seek  ?not-found  nip (forget) ;
+:! undo  lp@ (forget) ;
+:! marker  create  lp@ ,  does!>  @ (forget) ;
 :! words  lp@ traverse-list>  >name count type space ;
 
-marker reset
-
-\ TODO  forget (consider changing dictionary structure), hide, hook, some kind of debug word, and .s
+\ TODO  hide, hook, some kind of debug word, and .s
 \ Flawed definition : .s  begin sp@ s0 < while .# bl emit repeat ;
