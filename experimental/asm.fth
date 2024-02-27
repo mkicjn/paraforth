@@ -113,7 +113,7 @@
 :code and  rdx popq  rax rdx andq ;code
 
 \ TODO - Not compiling for some reason. Seems like rax is getting corrupted somehow
-[ $ 10 begin dup $ 0 > while  $ 4d emit  1- then int3! drop ]
+[ $ 10 begin dup $ 0 > while  $ 4d emit  1- int3! then drop ]
 int3!
 
 : collatz-step  dup $ 1 and  if  dup 2* + 1+  else  2/  then ;
