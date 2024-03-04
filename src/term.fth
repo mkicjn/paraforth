@@ -12,11 +12,11 @@
 : cnl  csi . .char E ; \ Next line
 : cpl  csi . .char F ; \ Previous line
 : cha  csi . .char G ; \ Horizontal absolute
-: cha  csi . sc . .char H ; \ Position
+: cup  csi . sc . .char H ; \ Position
 : cus  csi ." ?25h" ; \ Show
 : cuh  csi ." ?25l" ; \ Hide
-: cha  csi .char s ; \ Save
-: cha  csi .char u ; \ Restore
+: scp  csi .char s ; \ Save
+: rcp  csi .char u ; \ Restore
 : dsr  csi ." 6n" ; \ Status report
 
 \ Erase:
