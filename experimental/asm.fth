@@ -104,16 +104,18 @@
 : 1+  rax incq ;
 : 1-  rax decq ;
 
-:! :code  { :! rsp rbp xchgq } ;
-:! ;code  { rsp rbp xchgq ; } ;
+\ :! :code  { : rsp rbp xchgq } ; \ TODO - Doesn't work for some reason, haven't debugged yet
+\ :! ;code  { rsp rbp xchgq ; } ;
 :! setgb  $ 9f0f w, $ 0 reg modr/m, ;
 :! movzxbl  $ b60f w, reg modr/m, ;
 :! andq  rex.w, $ 21 c, reg modr/m, ;
-:code >  rdx rax movq  rax popq  rax rdx cmpq  rax setgb  rax rax movzxbl ;code
-:code and  rdx popq  rax rdx andq ;code
+: >  rsp rbp xchgq  rdx rax movq  rax popq  rdx rax cmpq  rax setgb  rax rax movzxbl  rsp rbp xchgq ;
+: and  rsp rbp xchgq  rdx popq  rax rdx andq  rsp rbp xchgq ;
 
-\ TODO - Not compiling for some reason. Seems like rax is getting corrupted somehow
-[ $ 10 begin dup $ 0 > while  $ 4d emit  1- int3! then drop ]
+: cr  $ a emit ;
+[ $ 10 begin dup $ 0 > while  $ 4d emit  1- repeat  drop cr ]
+
+\ TODO - Basic benchmark missing some supporting definitions
 int3!
 
 : collatz-step  dup $ 1 and  if  dup 2* + 1+  else  2/  then ;

@@ -32,8 +32,8 @@ macro DPOP reg {
 ;			System Interface
 ;
 ; If this code is ever ported to another OS, hopefully only this section needs to be rewritten.
-; To work, the following subroutines should behave the same as on Linux: sys_halt, sys_rx, sys_tx
-; (These subroutines are only allowed to clobber rax.)
+; To work, the following subroutines should behave the same as on Linux.
+; These subroutines are only allowed to clobber rax.
 
 sys_tx:
 	mov	[sys_xcv.mov+1], al
