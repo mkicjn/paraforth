@@ -11,20 +11,20 @@ _(This project is an active work in progress.)_
 ### Quirks and Features:
 
 * Tiny binary executable size - under one kilobyte
-* Fast - a simplistic benchmark demonstrates ~4x speedup over `gforth-fast` on author's machine.
+* Fast - a simplistic benchmark demonstrates ~4x speedup over `gforth-fast` on author's machine
   * Benchmark task: find the longest Collatz sequence for starting values under 1 million
-* Fewer primitives than eForth - 19 vs. 31 - with at least a couple that could stand to be removed
-* Compile-only Forth, with no `STATE` variable and no interpreter buffer
-  * Code can still be "interpreted" (i.e., compiled and then run immediately) using `[` and `]`
+* Fewer primitives than eForth - 19 vs. 31 - with as many as 5 that could still be eliminated
 * Subroutine-threaded code, with inlining of primitives also implemented at runtime
   * Works by enabling a neat syntax for postponing blocks of code using `{` and `}`
+* Compile-only Forth, with no `STATE` variable and no interpreter buffer
+  * Code can still be "interpreted" (i.e., compiled and then run immediately) using `[` and `]`
+* No concept of `immediate`, technically, since all words execute immediately when typed
+  * Non-immediate words use a shim that compiles a call to the rest of their code
+* No built-in number syntax - parsing words like `$` and `#` used for integer literals of different bases
 * An assembler for a useful subset of x86-64 implemented as a runtime extension of the compiler
-* No built-in number syntax (parsing words like `$` and `#` used for integer literals of different bases)
-* No internalized concept of "immediate" words - all words execute immediately when typed
-  * (The trick is, non-immediate words simply compile a call instruction to their runtime code and return)
 * All I/O through a basic serial interface - `KEY` and `EMIT` are the only OS primitives in the core
-* Working (albeit very basic) ELF executable generator demo, but no metacompiled version yet
-* Reasonably extensive design notes in the source code (assumes familiarity with typical Forth internals)
+* Working but very basic demo of ELF executable generation (no metacompiler yet)
+* Reasonably extensive design notes in the source code - assumes familiarity with typical Forth internals
 
 ### Getting Started:
 
@@ -70,10 +70,14 @@ My hope for this project is that it will eventually become fully self-hosting, e
 
 #### Roadmap:
 
-1. Produce a minimal subroutine-threaded Forth compiler capable of implementing an assembler. ***(DONE)***
-2. Implement a basic assembler using the compiler. ***(DONE)***
-3. Extend the existing Forth compiler in-place using the assembler. ***(DONE)***
-4. Improve usability by providing a REPL with error handling, convenient launch scripts, and library code. ***(IN PROGRESS)***
+1. Produce a minimal subroutine-threaded Forth compiler capable of implementing an assembler.
+   * ***(DONE)***
+2. Implement a basic assembler using the compiler.
+   * ***(DONE)***
+3. Extend the existing Forth compiler in-place using the assembler.
+   * ***(DONE)***
+4. Improve usability by providing a REPL with error handling, convenient launch scripts, and library code.
+   * ***(IN PROGRESS)***
 5. Bootstrap the core and use the resulting system for other projects.
 
 _(Anything marked done is still subject to improvements over time.)_
