@@ -107,6 +107,7 @@
 \ :! :code  { : rsp rbp xchgq } ; \ TODO - Doesn't work for some reason, haven't debugged yet
 \ :! ;code  { rsp rbp xchgq ; } ;
 :! setgb  $ 9f0f w, $ 0 reg modr/m, ;
+:! setzb   $ 940f w, $ 0 reg modr/m, ;
 :! movzxbl  $ b60f w, reg modr/m, ;
 :! andq  rex.w, $ 21 c, reg modr/m, ;
 : >  rsp rbp xchgq  rdx rax movq  rax popq  rdx rax cmpq  rax setgb  rax rax movzxbl  rsp rbp xchgq ;
@@ -115,10 +116,19 @@
 : cr  $ a emit ;
 [ $ 10 begin dup $ 0 > while  $ 4d emit  1- repeat  drop cr ]
 
-\ TODO - Basic benchmark missing some supporting definitions
-int3!
+
+:! movq@  rex.w,  swap $ 8b   c,  mem modr/m, ;
+:! addq$  rex.w, $ 81 c, swap $ 0 reg modr/m, d, ;
+: over  rsp rbp xchgq  rdx popq  rdx pushq  rax pushq  rax rdx movq  rsp rbp xchgq ;
+: nip  rbp [ $ 8 ] addq$ ;
+: tuck  rsp rbp xchgq  rdx popq  rax pushq  rdx pushq  rsp rbp xchgq ;
+: 0=  rax rax testq  rax setzb   rax rax movzxbl ;
+: max  over over  > if nip else drop then ; \ Temporary?
+
+\ Basic benchmark to get an idea of the performance difference between the approaches
+\ TODO - Unable to verify this is working as intended, but it's much slower if so
 
 : collatz-step  dup $ 1 and  if  dup 2* + 1+  else  2/  then ;
 : collatz-len   $ 0 swap begin  dup $ 1 > while  collatz-step  swap 1+ swap repeat drop ;
-: max-collatz   $ 0 swap for  i collatz-len max  next ;
-[ # 1000000 max-collatz . cr bye ]
+: max-collatz   $ 0 swap  begin  tuck collatz-len  max  swap 1-  dup 0= until drop ; \ Temporary
+[ $ f4240 max-collatz int3 ]
