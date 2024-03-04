@@ -11,8 +11,8 @@ _(This project is an active work in progress.)_
 ### Quirks and Features:
 
 * Tiny binary executable size - under one kilobyte
-* Fast - a very informal benchmark estimates approximately 2-3x speedup over `gforth-fast`
-  * (Benchmark task was to find the longest Collatz sequence for starting values under 1 million)
+* Fast - a simplistic benchmark demonstrates ~4x speedup over `gforth-fast` on author's machine.
+  * Benchmark task: find the longest Collatz sequence for starting values under 1 million
 * Fewer primitives than eForth - 19 vs. 31 - with at least a couple that could stand to be removed
 * Compile-only Forth, with no `STATE` variable and no interpreter buffer
   * Code can still be "interpreted" (i.e., compiled and then run immediately) using `[` and `]`
