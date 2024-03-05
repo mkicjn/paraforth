@@ -14,12 +14,30 @@
 : space  bl emit ;
 
 \ Decimal integer I/O
+
+\ Number parsing
+:! c-for  { count for >r } ;
+:! c-i  { r@ c@ } ;
+:! c-next  { r> 1+ next drop } ;
+: glyph  $ 0 name c-for  over *  c-i digit +  c-next literal drop ;
+:! #  $ a glyph ; \ Decimal input
+:! %  $ 2 glyph ; \ Binary input
+\ TODO  Add support for signed integer literals
+
+\ Sign handling
 : sign  dup 0<> if  0> 2* 1-  then ;
-:! #  $ 0  name count  for  >r  $ a *  r@ c@ digit +  r> 1+  next drop literal ;
-: u.  $ 0  begin >r  # 10 /mod  r> 1+  over 0= until  nip  for  char 0 + emit  next ;
-:  .  dup 0< if  char - emit  negate  then  u. ;
-:  ?  @ . cr ;
-\ TODO  Add hexadecimal output
+: .sign  dup 0< if  char - emit  negate  then ;
+
+\ Number printing
+: -digit  dup # 10 >= if  # 10 - char a +  else  char 0 +  then ;
+: ,digits  swap begin  over /mod swap -digit c,  dup 0=  until  2drop ;
+: .digits  here -rot  ,digits  there here -  for  here i + c@ emit next ;
+: u.   # 10 .digits ; \ Print unsigned decimal
+:  .$  $ 10 .digits ; \ Print unsigned hexadecimal
+:  .%  % 10 .digits ; \ Print unsigned binary
+:  .   .sign u. ; \ Print signed decimal
+:  ?   @ . cr ;
+: dump  for dup c@ .$ bl emit 1+ next drop ;
 
 \ Words for embedding data into code
 : embed  { ahead }  here swap ;
