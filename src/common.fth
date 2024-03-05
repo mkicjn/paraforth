@@ -12,6 +12,7 @@
 : cr  $ a emit ;
 :! bl  $ 20 literal ;
 : space  bl emit ;
+: spaces  for space next ;
 
 \ Decimal integer I/O
 
@@ -37,7 +38,7 @@
 :  .%  % 10 .digits ; \ Print unsigned binary
 :  .   .sign u. ; \ Print signed decimal
 :  ?   @ . cr ;
-: dump  for dup c@ .$ bl emit 1+ next drop ;
+: dump  for dup c@ .$ space 1+ next drop ;
 
 \ Words for embedding data into code
 : embed  { ahead }  here swap ;
