@@ -18,9 +18,10 @@ _(This project is an active work in progress.)_
   * Works by enabling a neat syntax for postponing blocks of code using `{` and `}`
 * Compile-only Forth, with no `STATE` variable and no interpreter buffer
   * Code can still be "interpreted" (i.e., compiled and then run immediately) using `[` and `]`
-* No concept of `immediate`, technically, since all words execute immediately when typed
+* No concept of `immediate` words, technically, since all words execute immediately when typed
   * Non-immediate words use a shim that compiles a call to the rest of their code
-* No built-in number syntax - parsing words like `$` and `#` used for integer literals of different bases
+* No built-in number syntax - parsing words like `$` and `#` are used for integer literals (at first)
+  * The `base` variable and automatic number parsing are added as quality-of-life extensions in [repl.fth](src/repl.fth)
 * An assembler for a useful subset of x86-64 implemented as a runtime extension of the compiler
 * All I/O through a basic serial interface - `KEY` and `EMIT` are the only OS primitives in the core
 * Working but very basic demo of ELF executable generation (no metacompiler yet)
@@ -43,8 +44,9 @@ More example code is available in the [examples](examples) and [src](src) direct
 As a **very** brief overview, many trivial Forth examples can be translated to paraforth in just a couple of steps:
 * Precede all numeric literals with a parsing word indicating the base.
   * Example: `77` becomes `# 77` or `$ 4d`
-* Surround non-immediate words executed at the interpreter with brackets.
-  * Example: `bye` becomes `[ bye ]`
+  * **NOTE:** Avoidable if including [repl.fth](src/repl.fth)
+* Surround interpreted non-immediate words with brackets to execute them correctly.
+  * Example: `bye` becomes `[ bye ]`, `10 constant x` becomes `[ 10 ] constant x`
  
 _Friendly disclaimer: This is just scratching the surface.
 Although this project aims to respect established conventions, standards conformance is not a priority.

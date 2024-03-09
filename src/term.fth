@@ -5,14 +5,14 @@
 : sc  .char ; ;
 
 \ Cursor position:
-: cuu  csi . .char A ; \ Up
-: cud  csi . .char B ; \ Down
-: cuf  csi . .char C ; \ Forward
-: cub  csi . .char D ; \ Backward
-: cnl  csi . .char E ; \ Next line
-: cpl  csi . .char F ; \ Previous line
-: cha  csi . .char G ; \ Horizontal absolute
-: cup  csi . sc . .char H ; \ Position
+: cuu  csi .# .char A ; \ Up
+: cud  csi .# .char B ; \ Down
+: cuf  csi .# .char C ; \ Forward
+: cub  csi .# .char D ; \ Backward
+: cnl  csi .# .char E ; \ Next line
+: cpl  csi .# .char F ; \ Previous line
+: cha  csi .# .char G ; \ Horizontal absolute
+: cup  csi .# sc .# .char H ; \ Position
 : cus  csi ." ?25h" ; \ Show
 : cuh  csi ." ?25l" ; \ Hide
 : scp  csi .char s ; \ Save
@@ -20,24 +20,24 @@
 : dsr  csi ." 6n" ; \ Status report
 
 \ Erase:
-: ed  csi . .char J ; \ Display
-: el  csi . .char K ; \ Line
+: ed  csi .# .char J ; \ Display
+: el  csi .# .char K ; \ Line
 : cls  $ 2 ed ; \ Whole display
 
 \ Scroll:
-: su  csi . .char K ; \ Up
-: sd  csi . .char K ; \ Down
+: su  csi .# .char K ; \ Up
+: sd  csi .# .char K ; \ Down
 
 \ Graphics Rendition:
-: sgr  csi . .char m ; \ Set
+: sgr  csi .# .char m ; \ Set
 : rgr  $ 0 sgr ; \ Reset
 : fg  # 30 + sgr ; \ Foreground
 : bg  # 40 + sgr ; \ Background
 : fgb  # 90 + sgr ; \ Foreground (bright)
 : bgb  # 100 + sgr ; \ Background (bright)
 
-: 8bit  csi .char 5 sc . .char m ;
-: rgb   swap -rot  csi .char 2 sc . sc . sc . .char m ;
+: 8bit  csi .char 5 sc .# .char m ;
+: rgb   swap -rot  csi .char 2 sc .# sc .# sc .# .char m ;
 
 [ $ 0 ] constant black
 [ $ 1 ] constant red

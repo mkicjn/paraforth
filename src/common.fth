@@ -17,10 +17,11 @@
 \ Decimal integer I/O
 
 \ Number parsing
-:! c-for  { count for >r } ;
+:! c-for  { for >r } ;
 :! c-i  { r@ c@ } ;
 :! c-next  { r> 1+ next drop } ;
-: glyph  $ 0 name c-for  over *  c-i digit +  c-next literal drop ;
+: >number  ( base str cnt -- u )  $ 0 -rot c-for  over *  c-i digit +  c-next nip ;
+: glyph  name count >number literal ;
 :! #  $ a glyph ; \ Decimal input
 :! %  $ 2 glyph ; \ Binary input
 \ TODO  Add support for signed integer literals
@@ -32,12 +33,11 @@
 \ Number printing
 : -digit  dup # 10 >= if  # 10 - char a +  else  char 0 +  then ;
 : ,digits  swap begin  over /mod swap -digit c,  dup 0=  until  2drop ;
-: .digits  here -rot  ,digits  there here -  for  here i + c@ emit next ;
-: u.   # 10 .digits ; \ Print unsigned decimal
-:  .$  $ 10 .digits ; \ Print unsigned hexadecimal
-:  .%  % 10 .digits ; \ Print unsigned binary
-:  .   .sign u. ; \ Print signed decimal
-:  ?   @ . cr ;
+: .base  here -rot  ,digits  there here -  for  here i + c@ emit next ;
+: u.#  # 10 .base ; \ Print unsigned decimal
+:  .$  $ 10 .base ; \ Print unsigned hexadecimal
+:  .%  % 10 .base ; \ Print unsigned binary
+:  .#  .sign u.# ; \ Print signed decimal
 : dump  for dup c@ .$ space 1+ next drop ;
 
 \ Words for embedding data into code
@@ -50,6 +50,8 @@
 : parse  ( delim -- str cnt ) here swap parse,  dup there over - ;  \ parse, but temporary (reset data pointer)
 :! s"  embed  char " parse,  with-length ;
 :! ."  { s" type } ;
+:! ':  embed ; \ Analogous to :noname
+:! ;'  { ; } alone ;
 
 \ Data structures
 \ Note that since this is a compile-only Forth, create is not immediate, and therefore can't be used "immediately"
@@ -91,6 +93,7 @@
 \ Vectored execution
 :! alias  { :! postpone ; } ;
 :! nothing ;
+alias nothing  nop
 :! defer  create ' nothing , does>  @execute ;
 alias is    to
 alias doer  defer
