@@ -110,10 +110,14 @@ alias doer  defer
 \ Counted string comparisons
 : 2c@  swap c@ swap c@ ;
 : ?c=  2c@ = ?exit  rdrop unloop ;
-: -match  for  2dup ?c= cstep  next ; \ Find mismatch
-: cstr=  dup c@  -match  2c@ = ;
+: -match  1- dup 0> if  for  2dup ?c= cstep  next else drop then ; \ Find mismatch, stop on last character if not found
+: ccompare  dup c@ 1+  -match  2c@ - sign ;
 
-\ TODO  Implement compare (reusing -match)
+\ String operations
+: /string  over min tuck  - -rot + swap ;
+: match?  dup 0> if  -match 2c@ - sign  else nip nip then ;
+: ?dup  dup 0<> if  dup  then ;
+: compare  rot swap 2tuck  min match?  ?dup if  nip nip  else  - sign  then ;
 
 \ Common address and size calculations
 : aligned  1- tuck + swap invert and ; \ Aligns for powers of 2 only

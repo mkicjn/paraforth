@@ -60,6 +60,10 @@
 :! -rot  { rbx rax movq  drop  rbx dpushq } ;
 :! 2dup  { rdx dpushq  rax dpushq } ;
 :! 2drop  { rax dpopq  rdx dpopq } ;
+:! 2swap  { rcx pushq  rbx dpopq  rcx dpopq  rdx dpushq  rax dpushq  rax rbx movq  rdx rcx movq  rcx popq } ;
+:! 2nip  { rbp } $ 2 cells { addq$ } ;
+:! 2over  { rcx pushq  rbx dpopq  rcx dpopq  rcx dpushq  rbx dpushq  rdx dpushq  rax dpushq  rax rbx movq  rdx rcx movq  rcx popq } ;
+:! 2tuck  { rcx pushq  rbx dpopq  rcx dpopq  rdx dpushq  rax dpushq  rcx dpushq  rbx dpushq  rcx popq } ;
 
 \ Memory operations
 :! @  { rax rax movq@ } ;
@@ -75,11 +79,11 @@
 \ Return stack operations
 :! >r  { rax pushq  drop } ;
 :! r>  { dup  rax popq } ;
+:! r@  { dup  rax (sib) movq@  rsp (none) r*1 sib, } ;
+:! rdrop  { rsp } cell { addq$ } ;
 :! 2>r  { rdx pushq  rax pushq  2drop } ;
 :! 2r>  { 2dup  rax popq  rdx popq } ;
-:! r@  { dup  rax (sib) movq@  rsp (none) r*1 sib, } ;
 :! 2r@  { r@  rdx dpushq  rdx (sib) movq@+8  rsp (none) r*1 sib, } cell c, ;
-:! rdrop  { rsp } cell { addq$ } ;
 :! 2rdrop  { rsp } $ 2 cells { addq$ } ;
 
 \ Basic arithmetic
@@ -96,6 +100,7 @@
 :! /mod  { rbx rax movq  rax rdx movq  rdx rdx xorq  rbx divq } ;
 :! /     { /mod nip } ;
 :! mod   { /mod drop } ;
+:! abs  { rbx rax movq  rbx } cell cells 1- { sarq$  rax rbx xorq  rax rbx subq } ;
 
 \ Bitwise arithmetic
 :! invert  { rax notq } ;

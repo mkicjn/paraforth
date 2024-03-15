@@ -13,7 +13,8 @@ variable base  [ # 10 base ! ]
 	dup 0<> ?exit
 	over count ?parse# if  literal  drop ' nop then ; \ replace 0 xt with nop
 
-: .  base @ .base ;
+: u.  base @ .base ;
+: .  .sign u. ;
 : ?  @ . cr ;
 
 
