@@ -103,8 +103,8 @@ _cput:
 link ";"
 __exit:
 _exit:
-	mov	rbx, 0xc308c583480075ff ; EXIT
-	mov	[rdi], rbx
+	mov	rdx, 0xc308c583480075ff ; EXIT
+	mov	[rdi], rdx
 	add	rdi, 8
 	ret
 
@@ -231,8 +231,8 @@ _def:
 	mov	rsi, rdi
 	add	rdi, 8
 	call	_nameput
-	mov	rbx, 0x00458f08ed8348 ; ENTRY
-	mov	[rdi], rbx
+	mov	rdx, 0x00458f08ed8348 ; ENTRY
+	mov	[rdi], rdx
 	add	rdi, 7
 	ret
 
