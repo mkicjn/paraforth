@@ -1,10 +1,14 @@
 # paraforth
-**An extremely minimal (but not limiting) native code Forth in <1K**
+**An extremely minimal (but not limiting) native code Forth environment in <1K**
 
-At its heart, paraforth is just an assembly program with an association list of names to subroutines, and an input loop for invoking them.
-By pre-populating the list with *just* enough operations to implement *another assembler*, a self-extensible language is born.
+At its very core, paraforth is just an assembly program with an association list of names to subroutines, and an input loop for invoking them.
+By pre-populating the list with *just* enough functionality to implement *another assembler*, a self-extensible language is born.
 
 This project demonstrates a leap from just 19 words and 851 bytes to an interactive programming environment with hundreds of words.
+
+While aiming to keep the core as minimal as possible, this work draws the line at having to input pre-assembled machine code.
+The purpose of this is to maintain paraforth's ability to meaningfully self-host.
+Anything short of that, however - including writing an assembler from scratch - is considered fair game.
 
 _(This project is an active work in progress.)_
 
