@@ -78,16 +78,11 @@ __docol:
 	call	_docol
 _docol:
 	pop	rdx
-	push	rax
-	mov	rax, rdx
-	call	compile
-	pop	rax
-	ret
-compile:
+compile: ; takes argument in rdx
 	mov	byte [rdi], 0xe8 ; call
 	add	rdi, 5
-	sub	rax, rdi
-	mov	[rdi-4], eax
+	sub	rdx, rdi
+	mov	[rdi-4], edx
 	ret
 
 link "c,"
@@ -98,14 +93,18 @@ _cput:
 	stosb
 	pop	rax
 	push	rdx
+	ret
 
+; TODO - Is it possible to even remove enter and exit?
+link "enter"
+__enter:
 _enter:
 	mov	rdx, 0x00458f08ed8348 ; ENTER
 	mov	[rdi], rdx
 	add	rdi, 7
 	ret
 
-link ";"
+link "exit"
 __exit:
 _exit:
 exit:
@@ -205,7 +204,7 @@ _hex:
 	cmp	al, 0x20
 	jg	.loop
 	mov	rax, rdx
-	mov	dword [rdi], 0xb84850 ; movabs rax
+	mov	dword [rdi], 0xb84850 ; push rax, movabs rax
 	add	rdi, 3
 	stosq
 	pop	rax
@@ -214,14 +213,13 @@ _hex:
 
 ;;;;;;;;		Dictionary
 
-link ":!"
-__imm:
-_imm:
+link "link"
+__link:
+_link:
 	mov	[rdi], rsi
 	mov	rsi, rdi
 	add	rdi, 8
-	call	_nameput
-	jmp	_enter
+	jmp	_nameput
 
 link "seek"
 __seek:
@@ -248,38 +246,31 @@ _seek:
 
 ;;;;;;;;		REPL
 
-link "postpone"
-__postpone:
-_postpone:
-	; name
+getxt: ; leaves result in rdx
 	push	rdi
 	call	_nameput
 	pop	rdi
-	; here
 	push	rax
 	mov	rax, rdi
-	; seek
 	call	_seek
-	; >xt
 	movzx	ecx, byte [rax+8]
 	lea	rax, [rax+9+rcx]
-	; compile
-	call	compile
+	mov	rdx, rax
 	pop	rax
+	ret
+
+link "postpone"
+__postpone:
+_postpone:
+	call	getxt
+	call	compile
 	ret
 
 start:
 	lea	rbp, [space]
 	lea	rdi, [space]
 	mov	rsi, latest
-.repl:	push	rdi
-	add	rdi, 1024
-	push	rdi
-	call	_enter
-	call	_postpone
-	call	_exit
-	pop	rdx
-	pop	rdi
+.repl:	call	getxt
 	call	rdx
 	jmp	.repl
 
