@@ -11,7 +11,7 @@ entry start
 ; rbp = parameter stack
 ; rsp = return stack
 
-macro ENTRY {
+macro ENTER {
 	sub	rbp, 8
 	pop	qword [rbp]
 }
@@ -78,54 +78,41 @@ __docol:
 	call	_docol
 _docol:
 	pop	rdx
-	mov	byte [rdi], 0xe8
-	add	rdi, 5
-	sub	rdx, rdi
-	mov	[rdi-4], edx
+	push	rax
+	mov	rax, rdx
+	call	compile
+	pop	rax
 	ret
-
-link "dolit"
-__dolit:
-	call	_docol
-_dolit:
-	call	__dup
-	mov	word [rdi], 0xb848
-	add	rdi, 2
+compile:
+	mov	byte [rdi], 0xe8 ; call
+	add	rdi, 5
+	sub	rax, rdi
+	mov	[rdi-4], eax
 	ret
 
 link "c,"
 __cput:
 	call	_docol
 _cput:
+	pop	rdx
 	stosb
-	jmp	_drop
+	pop	rax
+	push	rdx
+
+_enter:
+	mov	rdx, 0x00458f08ed8348 ; ENTER
+	mov	[rdi], rdx
+	add	rdi, 7
+	ret
 
 link ";"
 __exit:
 _exit:
+exit:
 	mov	rdx, 0xc308c583480075ff ; EXIT
 	mov	[rdi], rdx
 	add	rdi, 8
 	ret
-
-
-;;;;;;;;		Stack operations
-
-link "dup"
-__dup:
-	call	_docol
-_dup:
-	ENTRY
-	push	rax
-	EXIT
-
-link "drop"
-__drop:
-	call	_docol
-_drop:
-	ENTRY
-	pop	rax
-	EXIT
 
 
 ;;;;;;;;		Arithmetic
@@ -134,20 +121,20 @@ link "+"
 __add:
 	call	_docol
 _add:
-	ENTRY
 	pop	rdx
-	add	rax, rdx
-	EXIT
+	pop	rcx
+	add	rax, rcx
+	push	rdx
 
-link "lshift"
+link "<<"
 __lshift:
 	call	_docol
 _lshift:
-	ENTRY
+	pop	rdx
 	mov	rcx, rax
 	pop	rax
 	shl	rax, cl
-	EXIT
+	push	rdx
 
 
 ;;;;;;;;		I/O
@@ -156,17 +143,19 @@ link "key"
 __key:
 	call	_docol
 _key:
-	ENTRY
-	call	_dup
+	pop	rdx
+	push	rax
 	call	sys_rx
-	EXIT
+	push	rdx
 
 link "emit"
 __emit:
 	call	_docol
 _emit:
+	pop	rdx
 	call	sys_tx
-	jmp	_drop
+	pop	rax
+	push	rdx
 
 
 ;;;;;;;;		Parsing
@@ -216,7 +205,8 @@ _hex:
 	cmp	al, 0x20
 	jg	.loop
 	mov	rax, rdx
-	call	_dolit
+	mov	dword [rdi], 0xb84850 ; movabs rax
+	add	rdi, 3
 	stosq
 	pop	rax
 	ret
@@ -225,16 +215,13 @@ _hex:
 ;;;;;;;;		Dictionary
 
 link ":!"
-__def:
-_def:
+__imm:
+_imm:
 	mov	[rdi], rsi
 	mov	rsi, rdi
 	add	rdi, 8
 	call	_nameput
-	mov	rdx, 0x00458f08ed8348 ; ENTRY
-	mov	[rdi], rdx
-	add	rdi, 7
-	ret
+	jmp	_enter
 
 link "seek"
 __seek:
@@ -261,20 +248,38 @@ _seek:
 
 ;;;;;;;;		REPL
 
+link "postpone"
+__postpone:
+_postpone:
+	; name
+	push	rdi
+	call	_nameput
+	pop	rdi
+	; here
+	push	rax
+	mov	rax, rdi
+	; seek
+	call	_seek
+	; >xt
+	movzx	ecx, byte [rax+8]
+	lea	rax, [rax+9+rcx]
+	; compile
+	call	compile
+	pop	rax
+	ret
+
 start:
 	lea	rbp, [space]
 	lea	rdi, [space]
 	mov	rsi, latest
-.repl:	push	rax
+.repl:	push	rdi
+	add	rdi, 1024
 	push	rdi
-	call	_nameput
+	call	_enter
+	call	_postpone
+	call	_exit
+	pop	rdx
 	pop	rdi
-	mov	rax, rdi
-	call	_seek
-	cmp	rax, 0
-	movzx	ecx, byte [rax+8]
-	lea	rdx, [rax+9+rcx]
-	pop	rax
 	call	rdx
 	jmp	.repl
 
