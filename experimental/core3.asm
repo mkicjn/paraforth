@@ -124,6 +124,7 @@ _add:
 	pop	rcx
 	add	rax, rcx
 	push	rdx
+	ret
 
 link "<<"
 __lshift:
@@ -134,6 +135,7 @@ _lshift:
 	pop	rax
 	shl	rax, cl
 	push	rdx
+	ret
 
 
 ;;;;;;;;		I/O
@@ -146,6 +148,7 @@ _key:
 	push	rax
 	call	sys_rx
 	push	rdx
+	ret
 
 link "emit"
 __emit:
@@ -155,6 +158,7 @@ _emit:
 	call	sys_tx
 	pop	rax
 	push	rdx
+	ret
 
 
 ;;;;;;;;		Parsing
@@ -184,6 +188,18 @@ _nameput:
 	pop	rax
 	ret
 
+link "literal"
+__literal:
+	call	_docol
+_literal:
+	pop	rdx
+	mov	dword [rdi], 0xb84850 ; push rax, movabs rax
+	add	rdi, 3
+	stosq
+	pop	rax
+	push	rdx
+	ret
+
 link "$"
 __hex:
 _hex:
@@ -204,10 +220,7 @@ _hex:
 	cmp	al, 0x20
 	jg	.loop
 	mov	rax, rdx
-	mov	dword [rdi], 0xb84850 ; push rax, movabs rax
-	add	rdi, 3
-	stosq
-	pop	rax
+	call	_literal ; pops rax
 	ret
 
 
