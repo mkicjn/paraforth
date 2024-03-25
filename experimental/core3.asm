@@ -12,15 +12,16 @@ entry start
 ; rsp = return stack
 
 macro ENTER {
-	sub	rbp, 8
+	lea	rbp, [rbp-8]
 	pop	qword [rbp]
 }
 
 macro EXIT {
 	push	qword [rbp]
-	add	rbp, 8
+	lea	rbp, [rbp+8]
 	ret
 }
+
 
 ;;;;;;;			System Interface
 
@@ -95,11 +96,10 @@ _cput:
 	push	rdx
 	ret
 
-; TODO - Is it possible to even remove enter and exit?
 link "enter"
 __enter:
 _enter:
-	mov	rdx, 0x00458f08ed8348 ; ENTER
+	mov	rdx, 0x00458ff86d8d48 ; ENTER
 	mov	[rdi], rdx
 	add	rdi, 7
 	ret
@@ -108,7 +108,7 @@ link "exit"
 __exit:
 _exit:
 exit:
-	mov	rdx, 0xc308c583480075ff ; EXIT
+	mov	rdx, 0xc3086d8d480075ff ; EXIT
 	mov	[rdi], rdx
 	add	rdi, 8
 	ret
@@ -266,11 +266,19 @@ getxt: ; leaves result in rdx
 	push	rax
 	mov	rax, rdi
 	call	_seek
+;	test	rdx, rdx
+;	jz	.q
 	movzx	ecx, byte [rax+8]
 	lea	rax, [rax+9+rcx]
 	mov	rdx, rax
 	pop	rax
 	ret
+;.q:
+;	push	rax
+;	mov	rax, 0x3f
+;	call	_emit
+;	jmp	getxt
+	
 
 link "postpone"
 __postpone:
@@ -286,7 +294,6 @@ start:
 .repl:	call	getxt
 	call	rdx
 	jmp	.repl
-
 
 last = latest
 
