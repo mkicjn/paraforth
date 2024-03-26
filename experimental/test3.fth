@@ -1,7 +1,6 @@
-link :!  enter  postpone link  postpone enter  exit
-
-:! ;  postpone exit  exit
-:! :  postpone link  postpone docol  postpone enter  ;
+link :!  enter  { link  enter }  exit
+:! ;  { exit }  exit
+:! :  { link  docol enter } ;
 
 :! int3  $ cc c, ;
 :! int3! int3 ;
@@ -28,38 +27,60 @@ link :!  enter  postpone link  postpone enter  exit
 :! movq   rex.w,  $ 89 c,  reg modr/m, ;
 :! addq   rex.w,  $ 01 c,  reg modr/m, ;
 :! subq   rex.w,  $ 29 c,  reg modr/m, ;
+:! xchgq  rex.w,  $ 87 c,  reg modr/m, ;
 
-:  dup   rax pushq ;
-:  drop  rax popq ;
-:  swap  rdx popq  rax pushq  rax rdx movq ;
-:  -     rdx rax movq  rax popq  rax rdx subq ;
+:! dup   { rax pushq } ;
+:! drop  { rax popq } ;
+:! swap  { rdx popq  rax pushq  rax rdx movq } ;
+:! +     { rdx popq  rax rdx addq } ;
+:! -     { rdx rax movq  rax popq  rax rdx subq } ;
+
+:! incq   rex.w, $ ff c, $ 0 reg modr/m, ;
+:! decq   rex.w, $ ff c, $ 1 reg modr/m, ;
+:! 1+    { rax incq } ;
+:! 1-    { rax decq } ;
 
 :! stosd            $ ab c, ;
 :! stosw   $ 66 c,  $ ab c, ;
-:  d,      stosd drop ;
-:  w,      stosw drop ;
-:  rel32,  rax rdi subq  $ 4 - d, ;
+:! stosq   rex.w,   $ ab c, ;
+:! d,      { stosd drop } ;
+:! w,      { stosw drop } ;
+:!  ,      { stosq drop } ;
+:! here    { rax pushq  rax rdi movq } ;
+:! there   { rax rdi xchgq } ;
+:! back    { rdi rax movq  rax popq } ;
 
 :! testq    rex.w,  $ 85 c,  reg modr/m, ;
 :! cmpq     rex.w,  $ 39 c,  swap reg modr/m, ;
+:  rel32,   here -  $ 4 - d, ;
 :! jz$      $ 840f w,  rel32, ;
-:! seteb    $ 940f w,  $ 0 reg modr/m, ;
 :! movzxbl  $ b60f w,      reg modr/m, ;
 
-:! begin  dup  rax rdi movq ;
-:  cond   rdx rax movq  rax popq  rdx rdx testq ;
-:! until  postpone cond postpone jz$ ;
+:! movabs$  $ b848 w,  , ;
+:  literal  { dup movabs$ } ;
 
-:  =  rdx popq  rax rdx cmpq  rax seteb  rax rax movzxbl ;
+:! begin  here ;
+:! cond   { rdx rax movq  rax popq  rdx rdx testq } ;
+:! until  { cond jz$ } ;
 
-:!  \  begin key $ a = until ;
+:! seteb  $ 940f w,  $ 0 reg modr/m, ;
+:! =      { rdx popq  rax rdx cmpq  rax seteb  rax rax movzxbl } ;
+
+:! \  begin key $ a = until ;
 \ Comments enabled
 
 :! movzxb@  rex.w, $ b60f w, swap mem modr/m, ;
-:! incq   rex.w, $ ff c, $ 0 reg modr/m, ;
-:! decq   rex.w, $ ff c, $ 1 reg modr/m, ;
-
+:! c@  { rax rax movzxb@ } ;
+:! cell  $ 8 literal ;
 :  find  seek  $ 8 +  rcx rax movzxb@  rax rcx addq  rax incq ;
+int3!
+:  find  seek  cell +  dup c@ + 1+ ;
+int3!
+\ ^ Interesting case study above - almost the same output
+
+\ Most of the stuff below no longer useful?
+\ TODO  Separate assembler definitions from primitives
+
 :  compile  $ e8 c, rel32, ;
 :  here  rax pushq  rax rdi movq ;
 :  back  rdi rax movq  rax popq ;
@@ -69,6 +90,5 @@ link :!  enter  postpone link  postpone enter  exit
 :! {  begin  name find dup compile  ' } =  until ;
 \ ^ Ideally we speedrun to this point to reduce rework
 
-:! +  { rdx popq  rax rdx addq } ;
 :  test  $ 1  $ 2  + ;
 int3!

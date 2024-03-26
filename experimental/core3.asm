@@ -188,18 +188,6 @@ _nameput:
 	pop	rax
 	ret
 
-link "literal"
-__literal:
-	call	_docol
-_literal:
-	pop	rdx
-	mov	dword [rdi], 0xb84850 ; push rax, movabs rax
-	add	rdi, 3
-	stosq
-	pop	rax
-	push	rdx
-	ret
-
 link "$"
 __hex:
 _hex:
@@ -220,8 +208,12 @@ _hex:
 	cmp	al, 0x20
 	jg	.loop
 	mov	rax, rdx
-	call	_literal ; pops rax
+	mov	dword [rdi], 0xb84850 ; push rax, movabs rax
+	add	rdi, 3
+	stosq
+	pop	rax
 	ret
+
 
 
 ;;;;;;;;		Dictionary
@@ -280,12 +272,21 @@ getxt: ; leaves result in rdx
 ;	jmp	getxt
 	
 
-link "postpone"
-__postpone:
-_postpone:
+link "{"
+__lbrace:
+_lbrace:
 	call	getxt
+	cmp	rdx, __rbrace
+	je	.done
 	call	compile
+	jmp	_lbrace
+.done:	ret
+
+link "}"
+__rbrace:
+_rbrace:
 	ret
+
 
 start:
 	lea	rbp, [space]
