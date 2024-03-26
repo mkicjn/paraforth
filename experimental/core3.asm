@@ -265,12 +265,20 @@ getxt: ; leaves result in rdx
 	mov	rdx, rax
 	pop	rax
 	ret
-;.q:
-;	push	rax
+;.q:	push	rax
 ;	mov	rax, 0x3f
 ;	call	_emit
 ;	jmp	getxt
 	
+link '\'
+__comment:
+_comment:
+	push	rax
+.loop:	call	sys_rx
+	cmp	al, 0xa
+	jne	.loop
+	pop	rax
+	ret
 
 link "{"
 __lbrace:

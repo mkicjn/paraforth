@@ -1,9 +1,14 @@
+\ Forth defining words
+
 link :!  enter  { link  enter }  exit
 :! ;  { exit }  exit
 :! :  { link  docol enter } ;
 
-:! int3  $ cc c, ;
-:! int3! int3 ;
+
+\ Basic assembler words
+
+:! int3   $ cc c, ;
+:! int3!  int3 ;
 
 :! rax  $ 0 ;
 :! rcx  $ 1 ;
@@ -27,7 +32,14 @@ link :!  enter  { link  enter }  exit
 :! movq   rex.w,  $ 89 c,  reg modr/m, ;
 :! addq   rex.w,  $ 01 c,  reg modr/m, ;
 :! subq   rex.w,  $ 29 c,  reg modr/m, ;
-:! xchgq  rex.w,  $ 87 c,  reg modr/m, ;
+
+:! stosb            $ aa c, ;
+:! stosd            $ ab c, ;
+:! stosw   $ 66 c,  $ ab c, ;
+:! stosq   rex.w,   $ ab c, ;
+
+
+\ Basic Forth primitives
 
 :! dup   { rax pushq } ;
 :! drop  { rax popq } ;
@@ -35,50 +47,58 @@ link :!  enter  { link  enter }  exit
 :! +     { rdx popq  rax rdx addq } ;
 :! -     { rdx rax movq  rax popq  rax rdx subq } ;
 
-:! incq   rex.w, $ ff c, $ 0 reg modr/m, ;
-:! decq   rex.w, $ ff c, $ 1 reg modr/m, ;
-:! 1+    { rax incq } ;
-:! 1-    { rax decq } ;
-
-:! stosd            $ ab c, ;
-:! stosw   $ 66 c,  $ ab c, ;
-:! stosq   rex.w,   $ ab c, ;
-:! d,      { stosd drop } ;
+:! c,      { stosb drop } ;
 :! w,      { stosw drop } ;
+:! d,      { stosd drop } ;
 :!  ,      { stosq drop } ;
 :! here    { rax pushq  rax rdi movq } ;
-:! there   { rax rdi xchgq } ;
-:! back    { rdi rax movq  rax popq } ;
+:  rel32,   here -  $ 4 - d, ;
+
+
+\ More assembler words
+
+:! incq   rex.w, $ ff c, $ 0 reg modr/m, ;
+:! decq   rex.w, $ ff c, $ 1 reg modr/m, ;
+
+:! xchgq  rex.w,  $ 87 c,  reg modr/m, ;
 
 :! testq    rex.w,  $ 85 c,  reg modr/m, ;
 :! cmpq     rex.w,  $ 39 c,  swap reg modr/m, ;
-:  rel32,   here -  $ 4 - d, ;
 :! jz$      $ 840f w,  rel32, ;
 :! movzxbl  $ b60f w,      reg modr/m, ;
-
+:! seteb    $ 940f w,  $ 0 reg modr/m, ;
 :! movabs$  $ b848 w,  , ;
+:! movzxb@  rex.w, $ b60f w, swap mem modr/m, ;
+
+
+\ More Forth primitives
+
+:! there   { rax rdi xchgq } ;
+:! back    { rdi rax movq  rax popq } ;
+
+:! 1+    { rax incq } ;
+:! 1-    { rax decq } ;
+
 :  literal  { dup movabs$ } ;
 
 :! begin  here ;
 :! cond   { rdx rax movq  rax popq  rdx rdx testq } ;
 :! until  { cond jz$ } ;
 
-:! seteb  $ 940f w,  $ 0 reg modr/m, ;
 :! =      { rdx popq  rax rdx cmpq  rax seteb  rax rax movzxbl } ;
 
 :! \  begin key $ a = until ;
-\ Comments enabled
 
-:! movzxb@  rex.w, $ b60f w, swap mem modr/m, ;
 :! c@  { rax rax movzxb@ } ;
 :! cell  $ 8 literal ;
+
 :  find  seek  $ 8 +  rcx rax movzxb@  rax rcx addq  rax incq ;
 int3!
 :  find  seek  cell +  dup c@ + 1+ ;
-int3!
-\ ^ Interesting case study above - almost the same output
+int3! \ ^^ Interesting case study above - almost the same code compiled
 
-\ Most of the stuff below no longer useful?
+
+\ Most of the prototype stuff below no longer useful?
 \ TODO  Separate assembler definitions from primitives
 
 :  compile  $ e8 c, rel32, ;
