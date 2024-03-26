@@ -57,18 +57,16 @@ link :!  enter  { link  enter }  exit
 
 \ More assembler words
 
-:! incq   rex.w, $ ff c, $ 0 reg modr/m, ;
-:! decq   rex.w, $ ff c, $ 1 reg modr/m, ;
-
-:! xchgq  rex.w,  $ 87 c,  reg modr/m, ;
-
-:! testq    rex.w,  $ 85 c,  reg modr/m, ;
-:! cmpq     rex.w,  $ 39 c,  swap reg modr/m, ;
-:! jz$      $ 840f w,  rel32, ;
-:! movzxbl  $ b60f w,      reg modr/m, ;
-:! seteb    $ 940f w,  $ 0 reg modr/m, ;
-:! movabs$  $ b848 w,  , ;
-:! movzxb@  rex.w, $ b60f w, swap mem modr/m, ;
+:! incq     rex.w,    $ ff c,   $ 0 reg modr/m, ;
+:! decq     rex.w,    $ ff c,   $ 1 reg modr/m, ;
+:! xchgq    rex.w,    $ 87 c,       reg modr/m, ;
+:! testq    rex.w,    $ 85 c,       reg modr/m, ;
+:! cmpq     rex.w,    $ 39 c,  swap reg modr/m, ;
+:! movzxb@  rex.w,  $ b60f w,  swap mem modr/m, ;
+:! movabs$          $ b848 w,                 , ;
+:! jz$              $ 840f w,            rel32, ;
+:! movzxbl          $ b60f w,       reg modr/m, ;
+:! seteb            $ 940f w,   $ 0 reg modr/m, ;
 
 
 \ More Forth primitives
