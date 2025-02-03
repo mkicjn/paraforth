@@ -8,9 +8,10 @@ This project is a long-running exercise in building the smallest self-sufficient
 No inputting pre-assembled machine code at runtime, and no cobbling together logic operations from NAND.
 
 The entire language, save for just 15 words and 756 bytes of machine code, is implemented in itself - legibly - and builds in place on startup.
-Additionally, support for full bootstrapping coming soon (TM).
 
-_(Please note: This project is an active work in progress.)_
+*Author's note: It's worth acknowledging that this definition of "self-hosting" is admittedly a little weak.
+It's self-hosting in the sense that it assembles a better version of itself in memory at runtime, but not in the sense that it is fully bootstrapped yet.
+Some progress has been made towards this (see examples/elf_demo.fth), but until I find the time and interest, it remains a future goal.*
 
 ### Quirks and Features:
 
