@@ -70,7 +70,10 @@ Deviations are necessary to serve design goals, constraints, and/or personal pre
 
 My hope for this project is that it will eventually become fully self-hosting, even down to the OS level in the distant future.
 
-#### Roadmap:
+#### Status / Roadmap:
+
+As a solo project, this work has been dormant for a while, but not dead, as I explore other project ideas that might eventually feed back into this one.
+In any case, I still plan to return to this project eventually <sup>_(Famous last words?)_</sup> to follow through on my original goals:
 
 1. Produce a minimal subroutine-threaded Forth compiler capable of implementing an assembler.
    * ***(DONE)***
@@ -79,10 +82,11 @@ My hope for this project is that it will eventually become fully self-hosting, e
 3. Extend the existing Forth compiler in-place using the assembler.
    * ***(DONE)***
 4. Improve usability by providing a REPL with error handling, convenient launch scripts, and library code.
-   * ***(IN PROGRESS)***
-5. Bootstrap the core and use the resulting matured system for bigger projects. (Generating UEFI executables?)
+   * ***(DONE?)***
+5. Bootstrap the core executable and use the resulting matured system for bigger projects. (Generating UEFI executables?)
+   * ***(BARELY STARTED)***
 
-_(Anything marked done is still subject to improvements over time.)_
+_(Anything declared "done" might still be subject to enhancements over time.)_
 
 ### Resources:
 
