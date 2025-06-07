@@ -22,7 +22,6 @@
 :! l!  { >local ! } ;
 
 \ Example:
-\ [ 6 ] locals: a b c d e f
 \ : dup    [ 1 ] locals  0 l@  0 l@ ;
 \ : drop   [ 1 ] locals  ;
 \ : swap   [ 2 ] locals  1 l@  0 l@ ;

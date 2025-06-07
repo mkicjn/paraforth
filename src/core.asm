@@ -18,8 +18,8 @@ entry start
 ;
 ; rdi = data space pointer
 ; rsi = link pointer
-; rbp = parameter stack
-; rsp = return stack
+; rbp = return stack
+; rsp = parameter stack
 ;
 ; rbx is used as the loop counter instead of rcx for two reasons:
 ; * Although the `loop` instruction is nice, it only permits an 8-bit offset, limiting the size of loop bodies.
@@ -50,7 +50,7 @@ macro EXIT {
 ;
 ; If this code is ever ported to another OS, hopefully only this section needs to be rewritten.
 ; To work, the following subroutines should behave the same as on Linux.
-; These subroutines are only allowed to clobber rax.
+; Among the registers listed in the convention above, these subroutines are only allowed to clobber rax.
 
 sys_tx:
 	mov	[sys_xcv.mov+1], al
@@ -59,6 +59,7 @@ sys_tx:
 sys_rx:
 	xor	eax, eax
 sys_xcv:
+	push	rcx
 	push	rdx
 	push	rdi
 	push	rsi
@@ -69,6 +70,7 @@ sys_xcv:
 	pop	rsi
 	pop	rdi
 	pop	rdx
+	pop	rcx
 .mov:	mov	al, 127 ; self-modifying
 	ret
 
@@ -330,7 +332,7 @@ getxt: ; get the next word's XT and leave it in rdx
 	push	rax
 	mov	rax, rdi
 	call	_seek
-	; The error printing here (marked by a ;) is not strictly necessary but included for ergonomics.
+	; The error printing code here (marked by semicolons) is not strictly necessary but included for ergonomics.
 	test	rax, rax ;
 	jz	.notfound ;
 	movzx	ecx, byte [rax+8]
@@ -343,12 +345,13 @@ getxt: ; get the next word's XT and leave it in rdx
 .type:	cmp	cl, byte [rdi] ;
 	jge	.q ;
 	movzx	eax, byte [rdi+1+rcx] ;
-	call	_emit ;
+	call	sys_tx ;
 	inc	ecx ;
 	jmp	.type ;
 .q:	mov	rax, 0x3f ;
-	call	_emit ;
+	call	sys_tx ;
 	pop	rax ;
+	call	_comment ; (skip rest of line)
 	jmp	getxt ;
 	
 ; Like the error printing above, line comments are included just for convenience
