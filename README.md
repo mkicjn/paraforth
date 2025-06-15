@@ -36,7 +36,9 @@ From there, you can try entering the canonical Hello World example, which looks 
 
     [ ." Hello, world!" cr  bye ]
 
-Note that due to the interaction between `cat`, standard input, and the pipe to paraforth, you will need to hit enter once paraforth terminates before returning to the terminal.
+The core also exits on EOF, so ^D is typically a more convenient way to exit from the REPL than typing `[ bye ]`.
+
+Note that due to the interaction between `cat`, standard input, and the pipe to paraforth, you may need to hit enter once paraforth terminates before returning to the terminal.
 The loader script can also be run with no arguments for additional details.
 
 More example code is available in the [examples](examples) and [src](src) directories.
@@ -44,23 +46,26 @@ More example code is available in the [examples](examples) and [src](src) direct
 As a **very** brief overview, many trivial Forth examples can be translated to paraforth in just a couple of steps:
 * Surround interpreted non-immediate words with brackets to execute them.
   * Example: `bye` becomes `[ bye ]`, `10 constant x` becomes `[ 10 ] constant x`
-* (Optional) Precede numeric literals with a parsing word indicating the base.
+* (Now optional) Precede numeric literals with a parsing word indicating the base.
   * Example: `77` becomes `# 77` or `$ 4d`
-  * Note: This step is only mandatory if not using the code in [repl.fth](src/repl.fth)
- 
-_Friendly disclaimer: This is scratching the surface.
+  * Note: This step is mandatory if not using the code in [repl.fth](src/repl.fth)
+
+For more information, review the "Resources" section below.
+
+_Friendly disclaimer: This is just scratching the surface.
 Although this project aims to respect established conventions, standards conformance is not a priority.
-Deviations are necessary to serve design goals, constraints, and/or personal preferences._
+Some deviations are necessary to serve design goals, constraints, and/or personal preferences.
+Any notable deviations are called out by source code comments for those curious._
 
 <details>
 <summary> (Old usage notes with some additional details) </summary>
- 
+
 * Compile with `make`
 * Run manually with, e.g., `cat input | ./paraforth > output` or `cat input - | ./paraforth`
 * Debug with `gdb paraforth -ex 'r < <(cat input)'` and an `int3` assembled somewhere
   * Tip: Disassemble latest word with `x/10i $rsi+9+N` where *N* is the length of its name (i.e., `x/1c $rsi+8`)
 * Disassemble using `objdump -b binary -m i386:x86-64 -D paraforth`
- 
+
 </details>
 
 #### Dependencies:
