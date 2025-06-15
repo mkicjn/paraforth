@@ -413,7 +413,7 @@ start:
 ;
 ; This is the location of the return stack and data space, and is only relevant during initialization.
 ; If this isn't enough memory, these numbers can be freely incremented.
-; At least, that's the the easiest way, but a syscall to sbrk can be implemented later if needed.
+; At least, that's the easiest way, but a syscall to sbrk can be implemented later if needed.
 
 	rb 8*1024 ; 8KiB return stack
 space:
