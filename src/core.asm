@@ -67,12 +67,18 @@ sys_xcv:
 	lea	rsi, [sys_xcv.mov+1]
 	mov	edx, 1
 	syscall
+	; Exit on EOF optional but convenient (marked by double semicolons)
+	test	eax, eax ;;
+	jz	sys_exit ;;
 	pop	rsi
 	pop	rdi
 	pop	rdx
 	pop	rcx
 .mov:	mov	al, 127 ; self-modifying
 	ret
+sys_exit: ;;
+	mov	eax, 60 ;;
+	syscall ;;
 
 
 ;			Dictionary Structure
@@ -332,38 +338,38 @@ getxt: ; get the next word's XT and leave it in rdx
 	push	rax
 	mov	rax, rdi
 	call	_seek
-	; The error printing code here (marked by semicolons) is not strictly necessary but included for ergonomics.
-	test	rax, rax ;
-	jz	.notfound ;
+	; The error printing code here (marked by double semicolons) is not strictly necessary but included for ergonomics.
+	test	rax, rax ;;
+	jz	.notfound ;;
 	movzx	ecx, byte [rax+8]
 	lea	rax, [rax+9+rcx]
 	mov	rdx, rax
 	pop	rax
 	ret
-.notfound: ;
-	xor	ecx, ecx ;
-.type:	cmp	cl, byte [rdi] ;
-	jge	.q ;
-	movzx	eax, byte [rdi+1+rcx] ;
-	call	sys_tx ;
-	inc	ecx ;
-	jmp	.type ;
-.q:	mov	rax, 0x3f ;
-	call	sys_tx ;
-	pop	rax ;
-	call	_comment ; (skip rest of line)
-	jmp	getxt ;
+.notfound: ;;
+	xor	ecx, ecx ;;
+.type:	cmp	cl, byte [rdi] ;;
+	jge	.q ;;
+	movzx	eax, byte [rdi+1+rcx] ;;
+	call	sys_tx ;;
+	inc	ecx ;;
+	jmp	.type ;;
+.q:	mov	rax, 0x3f ;;
+	call	sys_tx ;;
+	pop	rax ;;
+	call	_comment ;; (skip rest of line)
+	jmp	getxt ;;
 	
 ; Like the error printing above, line comments are included just for convenience
-link '\'
-__comment:
-_comment:
-	push	rax
-.loop:	call	sys_rx
-	cmp	al, 0xa
-	jne	.loop
-	pop	rax
-	ret
+link '\' ;;
+__comment: ;;
+_comment: ;;
+	push	rax ;;
+.loop:	call	sys_rx ;;
+	cmp	al, 0xa ;;
+	jne	.loop ;;
+	pop	rax ;;
+	ret ;;
 
 ; Brace syntax `{ ... }` for postponement is another significant non-standard piece of this implementation.
 ; This just allows the user to postpone several words in a row, but the real significance is what that enables in context of this project.
