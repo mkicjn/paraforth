@@ -7,7 +7,7 @@ By pre-populating the list with *just* enough functionality to build a macro ass
 This project is a long-running exercise in building the smallest self-sufficient Forth possible, without **ANY** sacrifices in speed or usability.
 No inputting pre-assembled machine code at runtime, and no cobbling together logic operations from NAND.
 
-The entire language, save for just 15 words and 775 bytes of machine code, is implemented in itself - legibly - and builds in place on startup.
+The entire language, save for just 15 words and 773 bytes of machine code, is implemented in itself - legibly - and builds in place on startup.
 
 *Author's note: It's worth acknowledging that this definition of "self-hosting" is admittedly a little weak.
 It's self-hosting in the sense that it compiles a better version of itself in memory at runtime, but not in the sense that it emits its own executable yet.

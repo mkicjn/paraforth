@@ -267,13 +267,12 @@ _hex:
 	xor	rdx, rdx
 	call	nextw
 .loop:	cmp	al, 0x39
-	ja	.gt9
-	sub	al, 0x30
-	jmp	.add
-.gt9:	dec	al
+	jbe	.be9
+	dec	al
 	and	al, 0xdf
-	sub	al, 0x36
-.add:	movzx	eax, al
+	sub	al, 0x6
+.be9:	sub	al, 0x30
+	movzx	eax, al
 	sal	rdx, 4
 	or	rdx, rax
 	call	sys_rx
