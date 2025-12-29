@@ -255,7 +255,7 @@ _nameput:
 ; `$` parses the next word as a hexadecimal number (without error handling).
 ; Once the number is parsed, it compiles code that pushes it onto the stack.
 ;
-; This represents yet another deviation from a typical Forth is that numbers aren't parsed implicitly.
+; This represents yet another deviation from a typical Forth in that numbers aren't parsed implicitly.
 ; This solution is far simpler and avoids the need for BASE by forcing it to be explicit.
 ;
 ; Only hexadecimal input is provided, since it's far more useful than decimal for an assembler.
