@@ -2,7 +2,8 @@
 
 \ SplitMix64, adapted (translated and modified) from Sebastiano Vigna's PRNG shootout implementation [1].
 \ The only modification here is to use key/counter inputs (naming inspired by Squares [2]) in lieu of state,
-\ based on the observation that `x` is merely some initial value plus a multiple of the golden ratio.
+\ based on the observation that `x` is merely some initial value plus a multiple of that first constant
+\ (which, fun fact, represents the fractional part of the golden ratio times 2^64).
 \
 \ [1] https://prng.di.unimi.it/splitmix64.c
 \ [2] https://doi.org/10.48550/arXiv.2004.06278
@@ -17,11 +18,13 @@
   $ 94d049bb133111eb *
   dup $ 1f >> xor ;
 
+alias cbrng  splitmix64_ctr
 
-\ For convenience, new RNGs can be created using `rng`, keyed with their address by default or seeded with `seed`.
 
-:! rng  create  $ 0 , here ,  does>  $ 1 over +!  2@ splitmix64_ctr ;
-:! seed  { at  cell+ ! } ;  \ FIXME: Updates the key field without modifying the counter - might be undesirable
+\ For convenience, stateful RNGs can be created using `rng`, keyed with their address by default or seeded with `seed`.
+
+:! rng  create  $ 0 , here ,  does>  $ 1 over +!  2@ cbrng ;
+:! seed  $ 0 literal { swap  at  2! } ;  \ Updates key field and resets counter
 
 
 \ A default RNG called `rand` is also provided which is seeded by UNIX time, a la srand(time(NULL)).
