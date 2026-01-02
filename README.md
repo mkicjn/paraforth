@@ -17,6 +17,7 @@ Some progress has been made towards this (see examples/elf_demo.fth), but until 
 
 * Tiny binary executable size - under one kilobyte
 * Fast - a simplistic benchmark task demonstrates ~4x speedup over `gforth-fast` on author's machine
+  * (against Gforth 0.7.3, which most distros have; note that 0.7.9 is much faster - only 1.08x speedup there!)
 * Fewer primitives than eForth - 15 vs. 31 - with one spent just to enable line comments out of the box
 * Subroutine-threaded code with primitive inlining - works by postponing blocks of code with `{` and `}`
 * Compile-only Forth - code can still be "interpreted" (compiled and executed immediately) with `[` and `]`
