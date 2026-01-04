@@ -20,7 +20,7 @@
 	begin  dup 0<> while  r@  over >r  go  r> @  repeat drop rdrop ;
 \ ^ Explanation: `traverse-list>` consumes its return address (from whence it is called),
 \ but returns to it repeatedly, expecting the remainder of the word to consume each link pointer.
-\ (What the stack diagram calls "xt" is not a proper xt but an address inside the caller.)
+\ (Thus, what the stack diagram calls "xt" is not actually an xt, and you do not put it there)
 \ A word can return early from `traverse-list>` by `rdrop`ing three times.
 
 \ Example invocation:
