@@ -62,14 +62,14 @@
 : underline    # 4 sgr ;
 : slowblink    # 5 sgr ;
 : fastblink    # 6 sgr ;
-: invert       # 7 sgr ;
+: reverse      # 7 sgr ;
 : conceal      # 8 sgr ;
 : strike       # 9 sgr ;
 : nofaint      # 22 sgr ;
 : noitalic     # 23 sgr ;
 : nounderline  # 24 sgr ;
 : noblink      # 25 sgr ;
-: noinvert     # 27 sgr ;
+: noreverse    # 27 sgr ;
 : reveal       # 28 sgr ;
 : nostrike     # 29 sgr ;
 alias nobold nofaint
