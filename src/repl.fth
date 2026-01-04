@@ -60,8 +60,11 @@ defer quit
 : (forget)  back  here @ lp! ;
 :! forget  name  dup seek  ?not-found  nip (forget) ;
 :! undo  lp@ (forget) ;
-:! marker  create  lp@ ,  does!>  @ (forget) ;
-:! words  lp@ traverse-list>  >name count type space ;
+:! marker  create  lp@ ,
+           does!>  @ (forget) ;
+
+:! words  lp@ traverse-list>
+          >name count type space ;
 
 : <.>  ." <" dup .# ." > " ;
 :! ?for  { dup 0> if  for } ;
@@ -71,4 +74,9 @@ defer quit
 \ ^ This definition is really tricky because the operations directly interfere with the stack...
 \ I've tried to refactor this to make it clearer, but it's a miracle that it works at all.
 
+: later0  later> $ 0 ;
+: rseek  ( addr -- addr 0 | link 1 )
+  later0  lp@ traverse-list>
+  2dup >= if  nip $ 1  2rdrop 2rdrop  else  drop then ( later 0 ) ;
+  
 \ TODO  `hide`, and some kind of debug word if possible
