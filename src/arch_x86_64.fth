@@ -140,7 +140,7 @@ link :!  enter  { link  enter }  exit \ :! used instead of : for defining immedi
 
 \ More Forth primitives
 
-\ Paramter stack operations
+\ Parameter stack operations
 :! nip    { rdx popq } ;
 :! tuck   { rdx popq  rax pushq  rdx pushq } ;
 :! over   { rdx popq  rdx pushq  rax pushq  rax rdx movq } ;
